@@ -98,6 +98,18 @@
     reader.readAsText(file);
   });
 
+  // ---------- Danger Zone ----------
+  document.getElementById('btnClearApplications').addEventListener('click', () => {
+    const count = DB.getAll('applications').length;
+    if (!count) {
+      toast('There are no applications to clear', 'danger');
+      return;
+    }
+    if (!confirmAction(`Delete all ${count} application record(s) for every client? This cannot be undone.`)) return;
+    DB.saveAll('applications', []);
+    toast(`${count} application record(s) deleted`, 'success');
+  });
+
   // ---------- Cloud Sync (Google Drive) ----------
   document.getElementById('s_googleClientId').value = DriveSync.getConfig().clientId || '';
 

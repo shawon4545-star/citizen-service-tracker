@@ -72,10 +72,26 @@ const Importer = (() => {
     return mapping;
   }
 
+  /** Excel merged cells only store their value in the top-left cell — every other cell in the range comes
+      back blank. Copies that value across the whole range so merged Fee/Working cells import correctly. */
+  function expandMergedCells(ws) {
+    (ws['!merges'] || []).forEach((range) => {
+      const topLeft = ws[XLSX.utils.encode_cell({ r: range.s.r, c: range.s.c })];
+      if (!topLeft) return;
+      for (let r = range.s.r; r <= range.e.r; r++) {
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          if (r === range.s.r && c === range.s.c) continue;
+          ws[XLSX.utils.encode_cell({ r, c })] = { ...topLeft };
+        }
+      }
+    });
+  }
+
   /** Parses a workbook's first sheet into { headers, dataRows } (dataRows = array of arrays, header row excluded). */
   function parseWorkbook(workbook) {
     const sheetName = workbook.SheetNames[0];
     const ws = workbook.Sheets[sheetName];
+    expandMergedCells(ws);
     const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
     const headers = (aoa[0] || []).map((h) => String(h ?? '').trim());
     const dataRows = aoa.slice(1);
