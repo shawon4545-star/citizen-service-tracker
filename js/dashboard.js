@@ -30,6 +30,7 @@
   const withDue = openApps.filter((a) => a.dueDate);
   const overdue = withDue.filter((a) => DB.dueBucket(a) === 'overdue');
   const dueSoonOrToday = withDue.filter((a) => ['dueToday', 'dueSoon'].includes(DB.dueBucket(a)));
+  const totalFee = applications.reduce((sum, a) => (a.fee !== '' && a.fee !== null && a.fee !== undefined ? sum + Number(a.fee) : sum), 0);
 
   document.getElementById('statGrid').innerHTML = `
     <div class="stat-card accent-clients">
@@ -51,6 +52,11 @@
       <div class="stat-label">🚨 Overdue</div>
       <div class="stat-value">${overdue.length}</div>
       <div class="stat-sub">Needs immediate follow-up</div>
+    </div>
+    <div class="stat-card accent-clients">
+      <div class="stat-label">💰 Total Fees</div>
+      <div class="stat-value">${totalFee.toLocaleString()}</div>
+      <div class="stat-sub">Across all applications</div>
     </div>
   `;
 
@@ -99,23 +105,28 @@
   }
 
   // ---------- By service type ----------
-  const counts = {};
-  applications.forEach((a) => (counts[a.serviceType] = (counts[a.serviceType] || 0) + 1));
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const summary = {};
+  applications.forEach((a) => {
+    const key = a.serviceType || 'Unspecified';
+    if (!summary[key]) summary[key] = { count: 0, fee: 0 };
+    summary[key].count++;
+    if (a.fee !== '' && a.fee !== null && a.fee !== undefined) summary[key].fee += Number(a.fee);
+  });
+  const entries = Object.entries(summary).sort((a, b) => b[1].count - a[1].count);
   if (!entries.length) {
     document.getElementById('serviceSummary').innerHTML = `<div class="text-faint">No applications logged yet.</div>`;
   } else {
-    const max = Math.max(...entries.map((e) => e[1]));
+    const max = Math.max(...entries.map(([, v]) => v.count));
     document.getElementById('serviceSummary').innerHTML = entries
       .map(
-        ([type, count]) => `
+        ([type, v]) => `
       <div style="margin-bottom:10px;">
         <div class="flex-between" style="margin-bottom:4px;">
           <span style="font-size:13px;">${Exporter.escapeHtml(type)}</span>
-          <strong style="font-size:13px;">${count}</strong>
+          <strong style="font-size:13px;">${v.count} · ${v.fee.toLocaleString()}</strong>
         </div>
         <div style="background:var(--surface-2); border-radius:6px; height:6px; overflow:hidden;">
-          <div style="width:${(count / max) * 100}%; background:var(--primary); height:100%;"></div>
+          <div style="width:${(v.count / max) * 100}%; background:var(--primary); height:100%;"></div>
         </div>
       </div>`
       )
