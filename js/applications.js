@@ -58,6 +58,7 @@
   function renderTable(rows) {
     if (!rows.length) {
       document.getElementById('tableBody').innerHTML = '';
+      document.getElementById('tableFoot').innerHTML = '';
       document.getElementById('emptyState').classList.remove('hidden');
       document.getElementById('dataTable').classList.add('hidden');
     } else {
@@ -79,6 +80,14 @@
         </tr>`;
         })
         .join('');
+
+      const totalFee = rows.reduce((sum, a) => (a.fee !== '' && a.fee !== null && a.fee !== undefined ? sum + Number(a.fee) : sum), 0);
+      document.getElementById('tableFoot').innerHTML = `
+        <tr style="font-weight:700;">
+          <td colspan="4">Total</td>
+          <td>${totalFee.toLocaleString()}</td>
+          <td colspan="3"></td>
+        </tr>`;
     }
     document.getElementById('recordCount').textContent = `${rows.length} application${rows.length === 1 ? '' : 's'}`;
   }

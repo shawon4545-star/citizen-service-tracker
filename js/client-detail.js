@@ -156,6 +156,7 @@
 
     if (!apps.length) {
       document.getElementById('appsBody').innerHTML = '';
+      document.getElementById('appsFoot').innerHTML = '';
       document.getElementById('appsEmpty').classList.remove('hidden');
       document.getElementById('appsTable').classList.add('hidden');
       return;
@@ -193,6 +194,14 @@
     document.getElementById('appsBody').querySelectorAll('[data-del]').forEach((btn) =>
       btn.addEventListener('click', () => deleteApp(btn.getAttribute('data-del')))
     );
+
+    const totalFee = apps.reduce((sum, a) => (a.fee !== '' && a.fee !== null && a.fee !== undefined ? sum + Number(a.fee) : sum), 0);
+    document.getElementById('appsFoot').innerHTML = `
+      <tr style="font-weight:700;">
+        <td colspan="3">Total (${apps.length} application${apps.length === 1 ? '' : 's'})</td>
+        <td>${totalFee.toLocaleString()}</td>
+        <td colspan="3"></td>
+      </tr>`;
   }
 
   function deleteApp(id) {
