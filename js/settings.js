@@ -98,6 +98,18 @@
     reader.readAsText(file);
   });
 
+  // ---------- Bulk SMS (BulkSMSBD) ----------
+  document.getElementById('s_smsApiKey').value = BulkSms.getConfig().apiKey || '';
+  document.getElementById('s_smsSenderId').value = BulkSms.getConfig().senderId || '';
+
+  document.getElementById('btnSaveSms').addEventListener('click', () => {
+    BulkSms.setConfig({
+      apiKey: document.getElementById('s_smsApiKey').value.trim(),
+      senderId: document.getElementById('s_smsSenderId').value.trim(),
+    });
+    toast('SMS settings saved', 'success');
+  });
+
   // ---------- Danger Zone ----------
   document.getElementById('btnClearApplications').addEventListener('click', () => {
     const count = DB.getAll('applications').length;

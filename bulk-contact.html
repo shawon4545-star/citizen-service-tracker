@@ -43,6 +43,25 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:16px;" id="bulkSmsCard">
+        <div class="card-header"><h2>Send via SMS (Bulk)</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0" id="bulkSmsHint">Sends the message above to every matching client below, one at a time, via your BulkSMSBD account (configured in Settings).</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnSendBulkSms">✉️ Send via SMS</button>
+          </div>
+          <div id="bulkSmsProgress" class="hidden" style="margin-top:12px;">
+            <div class="field-hint" id="bulkSmsStatus"></div>
+            <div class="table-wrap" style="margin-top:8px; max-height:260px; overflow-y:auto;">
+              <table>
+                <thead><tr><th>Client</th><th>Phone</th><th>Result</th></tr></thead>
+                <tbody id="bulkSmsResults"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <h2>Matching Clients</h2>
@@ -76,7 +95,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/auth-gate.js"></script>
 <script>
-  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/bulk-contact.js']);
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/sms.js', 'js/nav.js', 'js/bulk-contact.js']);
 </script>
 </body>
 </html>

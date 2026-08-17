@@ -82,6 +82,12 @@
       .replace(/\{address\}/g, settings.address || '');
   }
 
+  function messageForClient(c) {
+    const matches = matchingAppsFor(c.id);
+    const serviceLabel = state.service || (matches[0] ? matches[0].serviceType : 'your service');
+    return buildMessage(c, serviceLabel);
+  }
+
   function render() {
     const rows = getRows();
 
@@ -95,8 +101,7 @@
       document.getElementById('tableBody').innerHTML = rows
         .map((c) => {
           const matches = matchingAppsFor(c.id);
-          const serviceLabel = state.service || (matches[0] ? matches[0].serviceType : 'your service');
-          const message = buildMessage(c, serviceLabel);
+          const message = messageForClient(c);
           const services = (state.service || state.year || state.status ? matches : apps.filter((a) => a.clientId === c.id))
             .map((a) => Exporter.escapeHtml(a.serviceType) + (a.assessmentYear ? ` (AY ${Exporter.escapeHtml(a.assessmentYear)})` : ''))
             .join(', ') || '—';
@@ -126,14 +131,63 @@
       { key: 'phone', label: 'Phone', width: 16 },
       { key: 'message', label: 'Message', width: 50 },
     ];
-    const data = rows.map((c) => {
-      const matches = matchingAppsFor(c.id);
-      const serviceLabel = state.service || (matches[0] ? matches[0].serviceType : 'your service');
-      return { name: c.name, phone: c.phone, message: buildMessage(c, serviceLabel) };
-    });
+    const data = rows.map((c) => ({ name: c.name, phone: c.phone, message: messageForClient(c) }));
     Exporter.toExcel(cols, data, `Bulk-Contact-List-${DB.todayISO()}.xlsx`, 'Contacts');
     toast('List exported', 'success');
   });
 
+  // ---------- Bulk SMS ----------
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function refreshBulkSmsAvailability() {
+    const btn = document.getElementById('btnSendBulkSms');
+    if (!BulkSms.isConfigured()) {
+      btn.disabled = true;
+      document.getElementById('bulkSmsHint').innerHTML =
+        'Not set up yet — add your API Key and Sender ID in <a href="settings.html">Settings → Bulk SMS</a> first.';
+    } else {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('btnSendBulkSms').addEventListener('click', async () => {
+    const rows = getRows().filter((c) => c.phone);
+    if (!rows.length) {
+      toast('No clients with a phone number match the current filters', 'danger');
+      return;
+    }
+    if (!confirmAction(`Send this SMS to ${rows.length} client(s) individually? Each one is a separate message and will use your SMS credit.`)) return;
+
+    const btn = document.getElementById('btnSendBulkSms');
+    btn.disabled = true;
+    document.getElementById('bulkSmsProgress').classList.remove('hidden');
+    document.getElementById('bulkSmsResults').innerHTML = '';
+
+    let sent = 0;
+    let failed = 0;
+    for (const c of rows) {
+      document.getElementById('bulkSmsStatus').textContent = `Sending ${sent + failed + 1} of ${rows.length}…`;
+      const result = await BulkSms.sendOne(c.phone, messageForClient(c));
+      if (result.ok) sent++;
+      else failed++;
+      document.getElementById('bulkSmsResults').insertAdjacentHTML(
+        'beforeend',
+        `<tr>
+          <td>${Exporter.escapeHtml(c.name)}</td>
+          <td>${Exporter.escapeHtml(c.phone)}</td>
+          <td class="${result.ok ? 'text-success' : 'text-danger'}">${Exporter.escapeHtml(result.response)}</td>
+        </tr>`
+      );
+      await sleep(300);
+    }
+
+    document.getElementById('bulkSmsStatus').textContent = `Done — ${sent} sent, ${failed} failed.`;
+    toast(`SMS batch finished: ${sent} sent, ${failed} failed`, failed ? 'danger' : 'success');
+    btn.disabled = false;
+  });
+
+  refreshBulkSmsAvailability();
   render();
 })();

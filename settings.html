@@ -91,6 +91,20 @@
       </div>
 
       <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Bulk SMS (BulkSMSBD)</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">Used by the Bulk Contact page's "Send via SMS" button. These are stored only in this browser (not synced, not backed up) since they let someone spend your SMS credit.</p>
+          <div class="field-row">
+            <div class="field"><label>API Key</label><input id="s_smsApiKey" type="password" placeholder="Your BulkSMSBD API key" /></div>
+            <div class="field"><label>Sender ID</label><input id="s_smsSenderId" placeholder="e.g. 8809648910509" /></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnSaveSms">💾 Save SMS Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
         <div class="card-header"><h2>Data Backup</h2></div>
         <div class="card-pad">
           <p class="text-dim mt-0">Export a local backup file any time as extra safety, on top of Google Drive sync above.</p>
@@ -126,7 +140,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/auth-gate.js"></script>
 <script>
-  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/settings.js']);
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/sms.js', 'js/nav.js', 'js/settings.js']);
 </script>
 </body>
 </html>
