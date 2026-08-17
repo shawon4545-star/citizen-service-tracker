@@ -217,6 +217,19 @@
   // ---------- Bulk import from Excel/CSV ----------
   const importState = { headers: [], dataRows: [], mapping: {} };
 
+  document.getElementById('btnLeadTemplate').addEventListener('click', () => {
+    const cols = Importer.LEAD_FIELD_DEFS.map((def) => ({ key: def.key, label: def.label, width: 22 }));
+    const exampleRow = {
+      name: 'Karim Uddin',
+      phone: '01712345678',
+      source: 'Referral',
+      interestedService: 'Income Tax Return',
+      notes: 'Met at BPBS meeting, interested in filing this year',
+    };
+    Exporter.toExcel(cols, [exampleRow], 'Citizen-Service-Tracker-Leads-Template.xlsx', 'Leads');
+    toast('Template downloaded', 'success');
+  });
+
   document.getElementById('leadFileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
