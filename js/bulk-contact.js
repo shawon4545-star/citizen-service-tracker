@@ -1,7 +1,7 @@
 (function () {
   Shell.init({ page: 'bulk-contact', title: 'Bulk Contact', sub: 'Message every client or lead matching your filters in one place' });
 
-  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', leadSearch: '' };
+  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', leadSearch: '', contacted: '' };
   const settings = DB.getSettings();
   const clients = DB.getAll('clients');
   const clientsById = Object.fromEntries(clients.map((c) => [c.id, c]));
@@ -84,7 +84,26 @@
     render();
   });
 
+  document.getElementById('filterContacted').addEventListener('change', (e) => {
+    state.contacted = e.target.value;
+    render();
+  });
+
   document.getElementById('messageTemplate').addEventListener('input', render);
+
+  function matchesContacted(item) {
+    if (state.contacted === 'yes') return Boolean(item.lastContactedAt);
+    if (state.contacted === 'no') return !item.lastContactedAt;
+    return true;
+  }
+
+  function markContacted(item, contacted) {
+    const table = state.audience === 'leads' ? 'leads' : 'clients';
+    const value = contacted ? new Date().toISOString() : '';
+    DB.update(table, item.id, { lastContactedAt: value });
+    item.lastContactedAt = value; // keep the in-memory row (shared reference) in sync for re-render
+    render();
+  }
 
   // ---------- Clients audience ----------
   function matchingAppsFor(clientId) {
@@ -102,6 +121,7 @@
     return clients
       .filter((c) => (hasFilter ? matchingAppsFor(c.id).length > 0 : true))
       .filter((c) => (state.search ? (c.name || '').toLowerCase().includes(state.search) || (c.phone || '').includes(state.search) : true))
+      .filter(matchesContacted)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }
 
@@ -135,6 +155,7 @@
         const hay = [l.name, l.phone, l.source, l.interestedService].join(' ').toLowerCase();
         return hay.includes(state.leadSearch);
       })
+      .filter(matchesContacted)
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   }
 
@@ -190,15 +211,24 @@
           <td>${nameCell}</td>
           <td>${Exporter.escapeHtml(item.phone || '—')}</td>
           <td class="text-faint" style="font-size:12px;">${detailHtmlFor(item)}</td>
+          <td class="text-faint" style="font-size:12px;">${item.lastContactedAt ? DB.fmtDate(item.lastContactedAt.slice(0, 10)) : '—'}</td>
           <td>
             <div class="row-actions">
               ${item.phone ? `<a class="btn btn-whatsapp btn-sm" target="_blank" rel="noopener" href="${DB.waLink(item.phone, message)}">💬 WhatsApp</a>` : ''}
               ${item.phone ? `<a class="btn btn-sm" href="${DB.smsLink(item.phone, message)}">✉️ SMS</a>` : '<span class="text-faint">No phone</span>'}
+              <button class="btn btn-ghost btn-sm" data-knock="${item.id}">${item.lastContactedAt ? '↺ Reset' : '✓ Knocked'}</button>
             </div>
           </td>
         </tr>`;
         })
         .join('');
+
+      document.getElementById('tableBody').querySelectorAll('[data-knock]').forEach((btn) =>
+        btn.addEventListener('click', () => {
+          const item = rows.find((r) => r.id === btn.getAttribute('data-knock'));
+          if (item) markContacted(item, !item.lastContactedAt);
+        })
+      );
     }
     document.getElementById('recordCount').textContent = `${rows.length} ${state.audience === 'leads' ? 'lead' : 'client'}${rows.length === 1 ? '' : 's'}`;
   }
@@ -252,8 +282,12 @@
     for (const item of rows) {
       document.getElementById('bulkSmsStatus').textContent = `Sending ${sent + failed + 1} of ${rows.length}…`;
       const result = await BulkSms.sendOne(item.phone, messageFor(item));
-      if (result.ok) sent++;
-      else failed++;
+      if (result.ok) {
+        sent++;
+        markContacted(item, true);
+      } else {
+        failed++;
+      }
       document.getElementById('bulkSmsResults').insertAdjacentHTML(
         'beforeend',
         `<tr>

@@ -20,6 +20,14 @@
             <option value="leads">Leads</option>
           </select>
         </div>
+        <div class="field">
+          <label>Contact Status</label>
+          <select id="filterContacted">
+            <option value="">All</option>
+            <option value="no">Not yet contacted</option>
+            <option value="yes">Already contacted</option>
+          </select>
+        </div>
       </div>
 
       <div class="filters-bar" id="clientFilters">
@@ -98,7 +106,7 @@
         <div class="table-wrap">
           <table id="dataTable">
             <thead>
-              <tr><th id="colName">Client</th><th>Phone</th><th id="colDetail">Matching Service(s)</th><th></th></tr>
+              <tr><th id="colName">Client</th><th>Phone</th><th id="colDetail">Matching Service(s)</th><th>Contacted</th><th></th></tr>
             </thead>
             <tbody id="tableBody"></tbody>
           </table>
