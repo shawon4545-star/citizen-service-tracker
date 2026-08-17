@@ -504,6 +504,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .w-full { width: 100%; }
 .hidden { display: none !important; }
 
+/* ---------- Login ---------- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-card { width: 100%; max-width: 360px; }
+.login-card h2 { margin: 0 0 4px; }
+
 /* ---------- Client / reminder specific ---------- */
 .client-header {
   display: flex;

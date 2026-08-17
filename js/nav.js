@@ -38,13 +38,17 @@ const Shell = (() => {
 
   function sidebarHtml(activeKey, businessName) {
     const initial = (businessName || 'C').trim().charAt(0).toUpperCase();
+    const email = typeof AppAuth !== 'undefined' ? AppAuth.currentUserEmail() : '';
     return `
       <div class="brand">
         <div class="brand-mark">${initial}</div>
         <div class="brand-name">${businessName}</div>
       </div>
       <nav class="nav">${navHtml(activeKey)}</nav>
-      <div class="sidebar-footer">Citizen Service Tracker · local data</div>
+      <div class="sidebar-footer">
+        ${email ? `<div style="margin-bottom:6px;" title="${Exporter.escapeHtml(email)}">${Exporter.escapeHtml(email)}</div>` : ''}
+        <button class="btn btn-ghost btn-sm" id="btnSignOut" style="width:100%;">Sign Out</button>
+      </div>
     `;
   }
 
@@ -117,6 +121,9 @@ const Shell = (() => {
 
     document.getElementById('app-shell').prepend(sidebar);
     mountSyncPill();
+    document.getElementById('btnSignOut').addEventListener('click', () => {
+      if (typeof AppAuth !== 'undefined') AppAuth.signOut();
+    });
 
     const toggle = document.getElementById('menuToggle');
     toggle.addEventListener('click', () => sidebar.classList.toggle('open'));

@@ -24,10 +24,12 @@
   </div>
 </div>
 
-<script src="js/db.js"></script>
-<script src="js/export.js"></script>
-<script src="js/drive-sync.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/reminders.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth-gate.js"></script>
+<script>
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/reminders.js']);
+</script>
 </body>
 </html>
