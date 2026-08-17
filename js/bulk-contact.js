@@ -95,14 +95,32 @@
 
   document.getElementById('filterContacted').addEventListener('change', (e) => {
     state.contacted = e.target.value;
+    document.getElementById('reknockDaysField').classList.toggle('hidden', state.contacted !== 'due');
     render();
   });
+  document.getElementById('reknockDays').addEventListener('input', render);
 
   document.getElementById('messageTemplate').addEventListener('input', render);
+
+  function daysSince(iso) {
+    return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  }
+
+  function daysAgoLabel(iso) {
+    const days = daysSince(iso);
+    if (days <= 0) return 'today';
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
+  }
 
   function matchesContacted(item) {
     if (state.contacted === 'yes') return Boolean(item.lastContactedAt);
     if (state.contacted === 'no') return !item.lastContactedAt;
+    if (state.contacted === 'due') {
+      if (!item.lastContactedAt) return false;
+      const threshold = parseInt(document.getElementById('reknockDays').value, 10) || 7;
+      return daysSince(item.lastContactedAt) >= threshold;
+    }
     return true;
   }
 
@@ -221,7 +239,7 @@
           <td>${nameCell}</td>
           <td>${Exporter.escapeHtml(item.phone || '—')}</td>
           <td class="text-faint" style="font-size:12px;">${detailHtmlFor(item)}</td>
-          <td class="text-faint" style="font-size:12px;">${item.lastContactedAt ? DB.fmtDate(item.lastContactedAt.slice(0, 10)) : '—'}</td>
+          <td class="text-faint" style="font-size:12px;">${item.lastContactedAt ? `${DB.fmtDate(item.lastContactedAt.slice(0, 10))} <span class="text-faint">(${daysAgoLabel(item.lastContactedAt)})</span>` : '—'}</td>
           <td>
             <div class="row-actions">
               ${item.phone ? `<a class="btn btn-whatsapp btn-sm" target="_blank" rel="noopener" href="${DB.waLink(item.phone, message)}">💬 WhatsApp</a>` : ''}
