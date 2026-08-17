@@ -151,6 +151,50 @@ const Importer = (() => {
     };
   }
 
+  /** Detects repeating "Working" + "Fee" column pairs — some spreadsheets log several past jobs per
+      client as adjacent column pairs (Working/Fee, Working/Fee, ...) instead of one row per job. */
+  function detectWorkingFeePairs(headers) {
+    const pairs = [];
+    for (let i = 0; i < headers.length - 1; i++) {
+      if (normalizeHeader(headers[i]) === 'working' && normalizeHeader(headers[i + 1]) === 'fee') {
+        pairs.push({ workingIdx: i, feeIdx: i + 1 });
+      }
+    }
+    return pairs;
+  }
+
+  /** Splits a "Working" cell like "Income Tax 2024-25" into { serviceType, assessmentYear }. */
+  function parseWorkingText(text) {
+    const s = cellToString(text);
+    const m = /^(.*?)\s+(\d{4}-\d{2})$/.exec(s);
+    return m ? { serviceType: m[1].trim(), assessmentYear: m[2] } : { serviceType: s, assessmentYear: '' };
+  }
+
+  /** Builds zero or more ready-to-insert Application records (without clientId) from a row's repeating
+      Working/Fee pairs. Each non-empty pair becomes its own record, defaulted to "Completed" since this
+      format is a historical fee ledger (work already done), not a pending-work tracker. */
+  function buildApplicationsFromWorkingPairs(row, pairs, settings) {
+    return pairs
+      .map(({ workingIdx, feeIdx }) => {
+        const workingRaw = workingIdx < row.length ? cellToString(row[workingIdx]) : '';
+        if (!workingRaw) return null;
+        const { serviceType, assessmentYear } = parseWorkingText(workingRaw);
+        const feeRaw = feeIdx < row.length ? cellToString(row[feeIdx]) : '';
+        return {
+          serviceType: serviceType || 'Past Work',
+          assessmentYear,
+          reference: '',
+          status: 'Completed',
+          fee: feeRaw === '' ? '' : parseFloat(feeRaw.replace(/[^\d.-]/g, '')) || '',
+          submittedDate: '',
+          dueDate: '',
+          reminderLeadDays: settings.defaultReminderLeadDays,
+          notes: '',
+        };
+      })
+      .filter(Boolean);
+  }
+
   return {
     CLIENT_FIELD_DEFS,
     APPLICATION_FIELD_DEFS,
@@ -162,6 +206,8 @@ const Importer = (() => {
     isRowUsable,
     buildApplicationRawFromRow,
     buildApplicationRecordFromRow,
+    detectWorkingFeePairs,
+    buildApplicationsFromWorkingPairs,
     cellToString,
     cellToISODate,
   };

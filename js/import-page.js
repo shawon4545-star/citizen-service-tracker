@@ -1,7 +1,7 @@
 (function () {
   Shell.init({ page: 'import', title: 'Import Clients', sub: 'Bring in clients from an existing Excel or CSV file' });
 
-  const state = { headers: [], dataRows: [], mapping: {}, appMapping: {} };
+  const state = { headers: [], dataRows: [], mapping: {}, appMapping: {}, workingFeePairs: [] };
 
   document.getElementById('btnDownloadTemplate').addEventListener('click', () => {
     const cols = Importer.CLIENT_FIELD_DEFS.concat(Importer.APPLICATION_FIELD_DEFS).map((def) => ({
@@ -46,7 +46,12 @@
       state.dataRows = dataRows;
       state.mapping = Importer.autoMapColumns(headers, Importer.CLIENT_FIELD_DEFS);
       state.appMapping = Importer.autoMapColumns(headers, Importer.APPLICATION_FIELD_DEFS);
-      document.getElementById('fileStatus').textContent = `Loaded "${file.name}" — ${dataRows.length} row(s) found.`;
+      state.workingFeePairs = Importer.detectWorkingFeePairs(headers);
+      document.getElementById('fileStatus').textContent =
+        `Loaded "${file.name}" — ${dataRows.length} row(s) found.` +
+        (state.workingFeePairs.length
+          ? ` Detected ${state.workingFeePairs.length} "Working/Fee" column pair(s) — each filled one becomes its own past application record (marked Completed).`
+          : '');
       document.getElementById('mappingSection').classList.remove('hidden');
       renderMappingFields();
       renderAppMappingFields();
@@ -99,7 +104,11 @@
     const blankSkipped = state.dataRows.length - rows.length;
     const previewFields = Importer.CLIENT_FIELD_DEFS.filter((def) => state.mapping[def.key] >= 0);
     const previewAppFields = Importer.APPLICATION_FIELD_DEFS.filter((def) => state.appMapping[def.key] >= 0);
-    const appRowCount = rows.filter((row) => Importer.buildApplicationRecordFromRow(row, state.appMapping, DB.getSettings())).length;
+    const settingsForPreview = DB.getSettings();
+    const appRowCount = rows.filter((row) => Importer.buildApplicationRecordFromRow(row, state.appMapping, settingsForPreview)).length;
+    const workingPairCount = state.workingFeePairs.length
+      ? rows.reduce((sum, row) => sum + Importer.buildApplicationsFromWorkingPairs(row, state.workingFeePairs, settingsForPreview).length, 0)
+      : 0;
 
     document.getElementById('previewHead').innerHTML = `<tr>${previewFields
       .concat(previewAppFields)
@@ -118,7 +127,8 @@
     document.getElementById('previewCount').textContent =
       `Showing ${Math.min(5, rows.length)} of ${rows.length} importable row(s)` +
       (blankSkipped ? ` · ${blankSkipped} blank row(s) will be skipped` : '') +
-      (appRowCount ? ` · ${appRowCount} will also get a past application record` : '');
+      (appRowCount ? ` · ${appRowCount} will also get a past application record` : '') +
+      (workingPairCount ? ` · ${workingPairCount} past application record(s) from Working/Fee columns` : '');
   }
 
   document.getElementById('btnImport').addEventListener('click', () => {
@@ -161,6 +171,13 @@
       if (appRecord && client) {
         DB.insert('applications', { ...appRecord, clientId: client.id });
         appsCreated++;
+      }
+
+      if (client && state.workingFeePairs.length) {
+        Importer.buildApplicationsFromWorkingPairs(row, state.workingFeePairs, settings).forEach((rec) => {
+          DB.insert('applications', { ...rec, clientId: client.id });
+          appsCreated++;
+        });
       }
     });
 
