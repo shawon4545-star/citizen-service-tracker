@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bulk Contact · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content">
+      <div class="filters-bar">
+        <div class="field">
+          <label>Service Type</label>
+          <select id="filterService"><option value="">All</option></select>
+        </div>
+        <div class="field">
+          <label>Assessment Year</label>
+          <select id="filterYear"><option value="">All</option></select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="filterStatus"><option value="">All</option></select>
+        </div>
+        <div class="field grow">
+          <label>Search</label>
+          <input type="text" id="filterSearch" placeholder="Search client, phone..." />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn" id="filterReset">✕ Reset</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Message</h2></div>
+        <div class="card-pad">
+          <textarea id="messageTemplate" rows="4"></textarea>
+          <div class="field-hint">Placeholders: {clientName} {service} {businessName} {businessPhone} {address}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Matching Clients</h2>
+          <div class="flex gap-8">
+            <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
+            <button class="btn btn-sm" id="btnExportList">▤ Export List</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="dataTable">
+            <thead>
+              <tr><th>Client</th><th>Phone</th><th>Matching Service(s)</th><th></th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state hidden">
+          <div class="icon">📢</div>
+          <div><strong>No matching clients</strong></div>
+          <div class="text-faint">Adjust the filters above to find clients to contact.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker</footer>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth-gate.js"></script>
+<script>
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/bulk-contact.js']);
+</script>
+</body>
+</html>

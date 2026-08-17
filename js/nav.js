@@ -14,7 +14,10 @@ const Shell = (() => {
     },
     {
       group: 'Follow-up',
-      items: [{ key: 'reminders', href: 'reminders.html', icon: '\u{1F514}', label: 'Reminders' }],
+      items: [
+        { key: 'reminders', href: 'reminders.html', icon: '\u{1F514}', label: 'Reminders' },
+        { key: 'bulk-contact', href: 'bulk-contact.html', icon: '\u{1F4E2}', label: 'Bulk Contact' },
+      ],
     },
     {
       group: 'System',
