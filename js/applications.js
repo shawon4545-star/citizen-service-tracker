@@ -72,6 +72,7 @@
           <td>${Exporter.escapeHtml(a.serviceType)}${a.assessmentYear ? ` <span class="text-faint">(AY ${Exporter.escapeHtml(a.assessmentYear)})</span>` : ''}</td>
           <td>${Exporter.escapeHtml(a.reference || '—')}</td>
           <td><span class="badge ${DB.statusBadgeClass[a.status] || 'badge-neutral'}">${Exporter.escapeHtml(a.status)}</span></td>
+          <td>${a.fee !== '' && a.fee !== null && a.fee !== undefined ? Number(a.fee).toLocaleString() : '—'}</td>
           <td>${a.dueDate ? DB.fmtDate(a.dueDate) : '—'}</td>
           <td>${a.dueDate ? `<span class="badge ${DB.bucketBadgeClass[bucket]}">${DB.bucketLabel[bucket]}</span>` : '<span class="text-faint">—</span>'}</td>
           <td><a class="btn btn-ghost btn-sm btn-icon" href="client-detail.html?id=${a.client.id}" title="Open client">→</a></td>
