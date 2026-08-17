@@ -45,13 +45,21 @@
       state.headers = headers;
       state.dataRows = dataRows;
       state.mapping = Importer.autoMapColumns(headers, Importer.CLIENT_FIELD_DEFS);
-      state.appMapping = Importer.autoMapColumns(headers, Importer.APPLICATION_FIELD_DEFS);
       state.workingFeePairs = Importer.detectWorkingFeePairs(headers);
-      document.getElementById('fileStatus').textContent =
-        `Loaded "${file.name}" — ${dataRows.length} row(s) found.` +
-        (state.workingFeePairs.length
-          ? ` Detected ${state.workingFeePairs.length} "Working/Fee" column pair(s) — each filled one becomes its own past application record (marked Completed).`
-          : '');
+      // When repeating Working/Fee columns are detected, don't also auto-map the single-pair section below —
+      // it would otherwise grab the first pair too and double-create that job (once correctly split by year,
+      // once as a raw duplicate).
+      state.appMapping = state.workingFeePairs.length
+        ? Object.fromEntries(Importer.APPLICATION_FIELD_DEFS.map((def) => [def.key, -1]))
+        : Importer.autoMapColumns(headers, Importer.APPLICATION_FIELD_DEFS);
+      document.getElementById('fileStatus').textContent = `Loaded "${file.name}" — ${dataRows.length} row(s) found.`;
+
+      document.getElementById('workingPairsDetected').classList.toggle('hidden', !state.workingFeePairs.length);
+      document.getElementById('singleAppMappingCard').classList.toggle('hidden', Boolean(state.workingFeePairs.length));
+      if (state.workingFeePairs.length) {
+        document.getElementById('workingPairsNote').textContent =
+          `Detected ${state.workingFeePairs.length} repeating "Working / Fee" column pairs — each filled one becomes its own past application record for that client (service and assessment year split automatically, marked Completed). Nothing to map here.`;
+      }
       document.getElementById('mappingSection').classList.remove('hidden');
       renderMappingFields();
       renderAppMappingFields();
