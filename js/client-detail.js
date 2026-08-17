@@ -35,24 +35,8 @@
       <div><div class="k">Email</div><div class="v">${Exporter.escapeHtml(client.email || '—')}</div></div>
       <div><div class="k">Relation</div><div class="v">${Exporter.escapeHtml(client.relation || '—')}</div></div>
       <div><div class="k">Address</div><div class="v">${Exporter.escapeHtml(client.address || '—')}</div></div>
-      <div>
-        <div class="k">Portal Password</div>
-        <div class="v">
-          ${client.portalPassword
-            ? `<span id="pwMask">••••••••</span><span id="pwValue" class="hidden">${Exporter.escapeHtml(client.portalPassword)}</span> <button class="btn btn-ghost btn-sm btn-icon" id="btnTogglePw" title="Show/hide">👁</button>`
-            : '—'}
-        </div>
-      </div>
       ${client.notes ? `<div style="grid-column:1/-1;"><div class="k">Notes</div><div class="v">${Exporter.escapeHtml(client.notes)}</div></div>` : ''}
     `;
-
-    const togglePw = document.getElementById('btnTogglePw');
-    if (togglePw) {
-      togglePw.addEventListener('click', () => {
-        document.getElementById('pwMask').classList.toggle('hidden');
-        document.getElementById('pwValue').classList.toggle('hidden');
-      });
-    }
   }
 
   function deleteClient() {
@@ -100,11 +84,6 @@
                 <datalist id="relationSuggestions">${relationSuggestions()}</datalist>
               </div>
               <div class="field"><label>Address</label><input id="field_address" value="${Exporter.escapeHtml(client.address || '')}" /></div>
-              <div class="field">
-                <label>Portal Password</label>
-                <input id="field_portalPassword" value="${Exporter.escapeHtml(client.portalPassword || '')}" />
-                <div class="field-hint">e.g. e-TIN / e-Passport / birth registration portal login. Stored locally on this device only — not encrypted.</div>
-              </div>
               <div class="field"><label>Notes</label><textarea id="field_notes" rows="2">${Exporter.escapeHtml(client.notes || '')}</textarea></div>
             </form>
           </div>
@@ -135,7 +114,6 @@
         email: document.getElementById('field_email').value.trim(),
         relation: document.getElementById('field_relation').value.trim(),
         address: document.getElementById('field_address').value.trim(),
-        portalPassword: document.getElementById('field_portalPassword').value.trim(),
         notes: document.getElementById('field_notes').value.trim(),
       });
       toast('Client updated', 'success');

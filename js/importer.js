@@ -11,7 +11,6 @@ const Importer = (() => {
     { key: 'tin', label: 'TIN', aliases: ['tin', 'tinnumber', 'tinno'] },
     { key: 'email', label: 'Email / Gmail', aliases: ['gmail', 'email', 'mail', 'emailaddress'] },
     { key: 'address', label: 'Address', aliases: ['address', 'addr'] },
-    { key: 'portalPassword', label: 'Portal Password', aliases: ['passward', 'password', 'pass'] },
     { key: 'relation', label: 'Relation / Referral', aliases: ['relation', 'referral', 'ref'] },
     { key: 'notes', label: 'Notes', aliases: ['notes', 'note', 'remarks', 'comment', 'comments'] },
   ];

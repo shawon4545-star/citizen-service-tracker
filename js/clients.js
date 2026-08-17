@@ -135,11 +135,6 @@
                 <datalist id="relationSuggestions">${relationSuggestions()}</datalist>
               </div>
               <div class="field"><label>Address</label><input id="field_address" value="${Exporter.escapeHtml(record?.address || '')}" /></div>
-              <div class="field">
-                <label>Portal Password</label>
-                <input id="field_portalPassword" value="${Exporter.escapeHtml(record?.portalPassword || '')}" />
-                <div class="field-hint">e.g. e-TIN / e-Passport / birth registration portal login. Stored locally on this device only — not encrypted.</div>
-              </div>
               <div class="field"><label>Notes</label><textarea id="field_notes" rows="2">${Exporter.escapeHtml(record?.notes || '')}</textarea></div>
             </form>
           </div>
@@ -184,7 +179,6 @@
       email: document.getElementById('field_email').value.trim(),
       relation: document.getElementById('field_relation').value.trim(),
       address: document.getElementById('field_address').value.trim(),
-      portalPassword: document.getElementById('field_portalPassword').value.trim(),
       notes: document.getElementById('field_notes').value.trim(),
     };
 

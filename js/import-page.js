@@ -19,7 +19,6 @@
       tin: '123456789012',
       email: 'karim@example.com',
       address: 'House 12, Road 5, Dhanmondi, Dhaka',
-      portalPassword: 'MyPass123',
       relation: 'Walk-in',
       notes: 'Regular client',
       appServiceType: 'Income Tax Return',
