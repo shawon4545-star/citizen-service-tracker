@@ -5,7 +5,10 @@
   const state = { service: urlService, status: '', search: '' };
   const settings = DB.getSettings();
 
-  const serviceOptions = urlService && !settings.serviceTypes.includes(urlService) ? [urlService, ...settings.serviceTypes] : settings.serviceTypes;
+  // Include both the configured presets and whatever service names actually appear in the data —
+  // imports often bring in service names (e.g. "Mutation") that don't match a preset (e.g. "Land Mutation").
+  const actualServiceTypes = DB.getAll('applications').map((a) => a.serviceType).filter(Boolean);
+  const serviceOptions = [...new Set([...settings.serviceTypes, ...actualServiceTypes, ...(urlService ? [urlService] : [])])].sort();
   document.getElementById('filterService').innerHTML +=
     serviceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
   document.getElementById('filterStatus').innerHTML +=

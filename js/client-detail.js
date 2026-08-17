@@ -215,11 +215,10 @@
     state.editingAppId = id || null;
     const record = id ? DB.getAll('applications').find((a) => a.id === id) : null;
     const settings = DB.getSettings();
-    const serviceOptions = settings.serviceTypes.includes(record?.serviceType)
-      ? settings.serviceTypes
-      : record?.serviceType
-      ? [record.serviceType, ...settings.serviceTypes]
-      : settings.serviceTypes;
+    // Include both the configured presets and whatever service names actually appear in the data —
+    // imports often bring in service names (e.g. "Mutation") that don't match a preset (e.g. "Land Mutation").
+    const actualServiceTypes = DB.getAll('applications').map((a) => a.serviceType).filter(Boolean);
+    const serviceOptions = [...new Set([...settings.serviceTypes, ...actualServiceTypes, ...(record?.serviceType ? [record.serviceType] : [])])].sort();
 
     const modalRoot = document.getElementById('modalRoot');
     modalRoot.innerHTML = `

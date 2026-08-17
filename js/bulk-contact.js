@@ -7,8 +7,11 @@
   const clientsById = Object.fromEntries(clients.map((c) => [c.id, c]));
   const apps = DB.getAll('applications');
 
+  // Include both the configured presets and whatever service names actually appear in the data —
+  // imports often bring in service names (e.g. "Mutation") that don't match a preset (e.g. "Land Mutation").
+  const serviceOptions = [...new Set([...settings.serviceTypes, ...apps.map((a) => a.serviceType).filter(Boolean)])].sort();
   document.getElementById('filterService').innerHTML +=
-    settings.serviceTypes.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+    serviceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
   document.getElementById('filterStatus').innerHTML +=
     settings.statuses.map((s) => `<option value="${s}">${s}</option>`).join('');
   const years = [...new Set(apps.map((a) => a.assessmentYear).filter(Boolean))].sort().reverse();
