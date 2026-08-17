@@ -1,7 +1,7 @@
 (function () {
   Shell.init({ page: 'bulk-contact', title: 'Bulk Contact', sub: 'Message every client or lead matching your filters in one place' });
 
-  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', leadSearch: '', contacted: '' };
+  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', source: '', leadSearch: '', contacted: '' };
   const settings = DB.getSettings();
   const clients = DB.getAll('clients');
   const clientsById = Object.fromEntries(clients.map((c) => [c.id, c]));
@@ -24,6 +24,9 @@
   document.getElementById('filterYear').innerHTML += years.map((y) => `<option value="${y}">${y}</option>`).join('');
   document.getElementById('filterStage').innerHTML +=
     settings.leadStages.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+  const sourceOptions = [...new Set([...settings.leadSources, ...leads.map((l) => l.source).filter(Boolean)])].sort();
+  document.getElementById('filterSource').innerHTML +=
+    sourceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
 
   document.getElementById('messageTemplate').value = MESSAGES.clients;
 
@@ -72,14 +75,20 @@
     state.stage = e.target.value;
     render();
   });
+  document.getElementById('filterSource').addEventListener('change', (e) => {
+    state.source = e.target.value;
+    render();
+  });
   document.getElementById('filterSearchLeads').addEventListener('input', (e) => {
     state.leadSearch = e.target.value.toLowerCase();
     render();
   });
   document.getElementById('filterResetLeads').addEventListener('click', () => {
     state.stage = '';
+    state.source = '';
     state.leadSearch = '';
     document.getElementById('filterStage').value = '';
+    document.getElementById('filterSource').value = '';
     document.getElementById('filterSearchLeads').value = '';
     render();
   });
@@ -150,6 +159,7 @@
   function getLeadRows() {
     return leads
       .filter((l) => (state.stage ? l.stage === state.stage : true))
+      .filter((l) => (state.source ? l.source === state.source : true))
       .filter((l) => {
         if (!state.leadSearch) return true;
         const hay = [l.name, l.phone, l.source, l.interestedService].join(' ').toLowerCase();
