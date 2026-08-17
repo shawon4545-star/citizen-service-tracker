@@ -71,12 +71,15 @@
       <div class="card">
         <div class="card-header">
           <h2 id="tableTitle">All Leads</h2>
-          <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
+          <div class="flex gap-8" style="align-items:center;">
+            <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
+            <button class="btn btn-danger btn-sm hidden" id="btnDeleteSelected">🗑 Delete Selected</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="dataTable">
             <thead>
-              <tr><th>Name</th><th>Phone</th><th>Source</th><th>Interested In</th><th>Stage</th><th>Added</th><th></th></tr>
+              <tr><th style="width:1%;"><input type="checkbox" id="selectAll" /></th><th>Name</th><th>Phone</th><th>Source</th><th>Interested In</th><th>Stage</th><th>Added</th><th></th></tr>
             </thead>
             <tbody id="tableBody"></tbody>
           </table>

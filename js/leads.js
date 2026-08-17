@@ -1,5 +1,5 @@
 (function () {
-  const state = { stage: '', search: '', editingId: null };
+  const state = { stage: '', search: '', editingId: null, selectedIds: new Set() };
   const settings = DB.getSettings();
 
   const actionsRoot = Shell.init({ page: 'leads', title: 'Leads', sub: 'Prospective clients — track and follow up before they convert' });
@@ -53,6 +53,11 @@
 
   function renderTable(rows) {
     const body = document.getElementById('tableBody');
+    const visibleIds = new Set(rows.map((r) => r.id));
+    // Drop selections that scrolled out of the current filter so "select all" / the counter stay honest.
+    state.selectedIds.forEach((id) => {
+      if (!visibleIds.has(id)) state.selectedIds.delete(id);
+    });
 
     if (!rows.length) {
       body.innerHTML = '';
@@ -64,8 +69,10 @@
       body.innerHTML = rows
         .map((r) => {
           const isClosed = settings.leadClosedStages.includes(r.stage);
+          const checked = state.selectedIds.has(r.id) ? 'checked' : '';
           return `
         <tr>
+          <td><input type="checkbox" class="row-select" data-id="${r.id}" ${checked} /></td>
           <td>${Exporter.escapeHtml(r.name || '—')}</td>
           <td>${Exporter.escapeHtml(r.phone || '—')}</td>
           <td class="text-faint">${Exporter.escapeHtml(r.source || '—')}</td>
@@ -87,10 +94,45 @@
       body.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openFormModal(btn.getAttribute('data-edit'))));
       body.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', () => deleteRow(btn.getAttribute('data-del'))));
       body.querySelectorAll('[data-convert]').forEach((btn) => btn.addEventListener('click', () => convertToClient(btn.getAttribute('data-convert'))));
+      body.querySelectorAll('.row-select').forEach((cb) =>
+        cb.addEventListener('change', () => {
+          if (cb.checked) state.selectedIds.add(cb.getAttribute('data-id'));
+          else state.selectedIds.delete(cb.getAttribute('data-id'));
+          updateSelectionUI(rows);
+        })
+      );
     }
 
     document.getElementById('recordCount').textContent = `${rows.length} lead${rows.length === 1 ? '' : 's'}`;
+    updateSelectionUI(rows);
   }
+
+  function updateSelectionUI(rows) {
+    const selectAll = document.getElementById('selectAll');
+    selectAll.checked = rows.length > 0 && rows.every((r) => state.selectedIds.has(r.id));
+    selectAll.indeterminate = !selectAll.checked && rows.some((r) => state.selectedIds.has(r.id));
+
+    const btn = document.getElementById('btnDeleteSelected');
+    btn.classList.toggle('hidden', state.selectedIds.size === 0);
+    btn.textContent = `🗑 Delete Selected (${state.selectedIds.size})`;
+  }
+
+  document.getElementById('selectAll').addEventListener('change', (e) => {
+    const rows = getFilteredRows();
+    if (e.target.checked) rows.forEach((r) => state.selectedIds.add(r.id));
+    else rows.forEach((r) => state.selectedIds.delete(r.id));
+    renderAll();
+  });
+
+  document.getElementById('btnDeleteSelected').addEventListener('click', () => {
+    const count = state.selectedIds.size;
+    if (!count) return;
+    if (!confirmAction(`Delete ${count} selected lead(s)? This cannot be undone.`)) return;
+    state.selectedIds.forEach((id) => DB.remove('leads', id));
+    state.selectedIds.clear();
+    toast(`${count} lead(s) deleted`, 'success');
+    renderAll();
+  });
 
   function deleteRow(id) {
     if (!confirmAction('Delete this lead? This cannot be undone.')) return;

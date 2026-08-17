@@ -47,6 +47,17 @@ const Importer = (() => {
     return String(cell).trim();
   }
 
+  /** Like cellToString, but restores the leading 0 that gets silently stripped when Excel/CSV parsing
+      reads a Bangladeshi mobile number (e.g. 01712345678) as an actual number instead of text — numbers
+      can't have leading zeros, so it comes back as 1712345678 (exactly 10 digits, starting with 1). */
+  function cellToPhoneString(cell) {
+    if (typeof cell === 'number') {
+      const s = String(Math.trunc(cell));
+      return s.length === 10 && s.startsWith('1') ? '0' + s : s;
+    }
+    return cellToString(cell);
+  }
+
   function formatDDMMYY(d) {
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -126,7 +137,11 @@ const Importer = (() => {
     const record = {};
     CLIENT_FIELD_DEFS.forEach((def) => {
       const idx = mapping[def.key];
-      record[def.key] = idx >= 0 && idx < row.length ? cellToString(row[idx]) : '';
+      if (idx < 0 || idx >= row.length) {
+        record[def.key] = '';
+      } else {
+        record[def.key] = def.key === 'phone' ? cellToPhoneString(row[idx]) : cellToString(row[idx]);
+      }
     });
     return record;
   }
@@ -140,7 +155,11 @@ const Importer = (() => {
     const record = {};
     LEAD_FIELD_DEFS.forEach((def) => {
       const idx = mapping[def.key];
-      record[def.key] = idx >= 0 && idx < row.length ? cellToString(row[idx]) : '';
+      if (idx < 0 || idx >= row.length) {
+        record[def.key] = '';
+      } else {
+        record[def.key] = def.key === 'phone' ? cellToPhoneString(row[idx]) : cellToString(row[idx]);
+      }
     });
     return record;
   }
@@ -244,6 +263,7 @@ const Importer = (() => {
     detectWorkingFeePairs,
     buildApplicationsFromWorkingPairs,
     cellToString,
+    cellToPhoneString,
     cellToISODate,
   };
 })();
