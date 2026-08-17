@@ -25,6 +25,34 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <h2>Bulk Import from Excel / CSV</h2>
+        </div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">For larger lists — upload a file with Name/Phone/Source columns (any layout; you'll map columns below). Only import lists people actually gave you their number for.</p>
+          <input type="file" id="leadFileInput" accept=".xlsx,.xls,.csv" />
+          <div id="leadFileStatus" class="field-hint"></div>
+
+          <div id="leadMappingSection" class="hidden" style="margin-top:14px;">
+            <div id="leadMappingFields" class="field-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));"></div>
+
+            <div class="table-wrap" style="margin-top:12px;">
+              <table>
+                <thead id="leadPreviewHead"></thead>
+                <tbody id="leadPreviewBody"></tbody>
+              </table>
+            </div>
+            <div class="text-dim" id="leadPreviewCount" style="font-size:12px; margin:8px 0;"></div>
+
+            <div class="btn-row">
+              <button class="btn btn-primary" id="btnLeadImport">⭳ Import Leads</button>
+            </div>
+            <div id="leadImportResult" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="filters-bar">
         <div class="field">
           <label>Stage</label>
@@ -67,12 +95,13 @@
 
 <div id="modalRoot"></div>
 
+<script src="vendor/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/auth-gate.js"></script>
 <script>
-  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/leads.js']);
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/importer.js', 'js/nav.js', 'js/leads.js']);
 </script>
 </body>
 </html>

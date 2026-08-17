@@ -28,6 +28,14 @@ const Importer = (() => {
     { key: 'appNotes', label: 'Service Notes', aliases: ['servicenotes', 'worknotes'] },
   ];
 
+  const LEAD_FIELD_DEFS = [
+    { key: 'name', label: 'Name', aliases: ['name', 'fullname', 'leadname', 'contactname'] },
+    { key: 'phone', label: 'Phone / Mobile', required: true, aliases: ['mobile', 'phone', 'mobileno', 'contact', 'cell', 'mobilenumber', 'mobile1'] },
+    { key: 'source', label: 'Source', aliases: ['source', 'referral', 'ref', 'category'] },
+    { key: 'interestedService', label: 'Interested In', aliases: ['interestedin', 'service', 'servicetype', 'interest'] },
+    { key: 'notes', label: 'Notes', aliases: ['notes', 'note', 'remarks', 'comment', 'comments', 'businessname'] },
+  ];
+
   function normalizeHeader(h) {
     return String(h ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
   }
@@ -127,6 +135,16 @@ const Importer = (() => {
     return Boolean(record.name || record.phone);
   }
 
+  /** Builds a lead record (raw field values, not yet inserted) from a raw data row + column mapping. */
+  function buildLeadFromRow(row, mapping) {
+    const record = {};
+    LEAD_FIELD_DEFS.forEach((def) => {
+      const idx = mapping[def.key];
+      record[def.key] = idx >= 0 && idx < row.length ? cellToString(row[idx]) : '';
+    });
+    return record;
+  }
+
   /** Builds the raw (string) values for the mapped application columns of a row — used for the import preview. */
   function buildApplicationRawFromRow(row, mapping) {
     const record = {};
@@ -213,11 +231,13 @@ const Importer = (() => {
   return {
     CLIENT_FIELD_DEFS,
     APPLICATION_FIELD_DEFS,
+    LEAD_FIELD_DEFS,
     normalizeHeader,
     autoMapColumns,
     parseWorkbook,
     parseFile,
     buildClientFromRow,
+    buildLeadFromRow,
     isRowUsable,
     buildApplicationRawFromRow,
     buildApplicationRecordFromRow,

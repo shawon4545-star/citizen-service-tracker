@@ -172,6 +172,104 @@
     renderAll();
   });
 
+  // ---------- Bulk import from Excel/CSV ----------
+  const importState = { headers: [], dataRows: [], mapping: {} };
+
+  document.getElementById('leadFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('leadFileStatus').textContent = 'Reading file…';
+    try {
+      const { headers, dataRows } = await Importer.parseFile(file);
+      if (!headers.length) throw new Error('No columns found');
+      importState.headers = headers;
+      importState.dataRows = dataRows;
+      importState.mapping = Importer.autoMapColumns(headers, Importer.LEAD_FIELD_DEFS);
+      document.getElementById('leadFileStatus').textContent = `Loaded "${file.name}" — ${dataRows.length} row(s) found.`;
+      document.getElementById('leadMappingSection').classList.remove('hidden');
+      renderLeadMappingFields();
+      renderLeadPreview();
+    } catch (err) {
+      console.error(err);
+      document.getElementById('leadFileStatus').textContent = 'Could not read that file. Make sure it is a valid Excel or CSV file.';
+      document.getElementById('leadMappingSection').classList.add('hidden');
+    }
+  });
+
+  function renderLeadMappingFields() {
+    const wrap = document.getElementById('leadMappingFields');
+    wrap.innerHTML = Importer.LEAD_FIELD_DEFS.map((def) => {
+      const options = [`<option value="-1">— Not mapped —</option>`]
+        .concat(
+          importState.headers.map(
+            (h, i) => `<option value="${i}" ${importState.mapping[def.key] === i ? 'selected' : ''}>${Exporter.escapeHtml(h || `Column ${i + 1}`)}</option>`
+          )
+        )
+        .join('');
+      return `
+      <div class="field">
+        <label>${Exporter.escapeHtml(def.label)}${def.required ? ' *' : ''}</label>
+        <select data-lead-map-field="${def.key}">${options}</select>
+      </div>`;
+    }).join('');
+
+    wrap.querySelectorAll('[data-lead-map-field]').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        importState.mapping[sel.getAttribute('data-lead-map-field')] = parseInt(sel.value, 10);
+        renderLeadPreview();
+      });
+    });
+  }
+
+  function leadImportUsableRows() {
+    return importState.dataRows.filter((row) => Importer.buildLeadFromRow(row, importState.mapping).phone);
+  }
+
+  function renderLeadPreview() {
+    const rows = leadImportUsableRows();
+    const blankSkipped = importState.dataRows.length - rows.length;
+    const previewFields = Importer.LEAD_FIELD_DEFS.filter((def) => importState.mapping[def.key] >= 0);
+
+    document.getElementById('leadPreviewHead').innerHTML = `<tr>${previewFields.map((f) => `<th>${Exporter.escapeHtml(f.label)}</th>`).join('')}</tr>`;
+    document.getElementById('leadPreviewBody').innerHTML = rows
+      .slice(0, 5)
+      .map((row) => {
+        const r = Importer.buildLeadFromRow(row, importState.mapping);
+        return `<tr>${previewFields.map((f) => `<td>${Exporter.escapeHtml(r[f.key] || '—')}</td>`).join('')}</tr>`;
+      })
+      .join('');
+
+    document.getElementById('leadPreviewCount').textContent =
+      `Showing ${Math.min(5, rows.length)} of ${rows.length} importable row(s)` +
+      (blankSkipped ? ` · ${blankSkipped} row(s) without a phone number will be skipped` : '');
+  }
+
+  document.getElementById('btnLeadImport').addEventListener('click', () => {
+    if (importState.mapping.phone < 0) {
+      toast('Map the Phone column before importing', 'danger');
+      return;
+    }
+    const rows = leadImportUsableRows();
+    let added = 0;
+    let skipped = 0;
+    rows.forEach((row) => {
+      const r = Importer.buildLeadFromRow(row, importState.mapping);
+      if (findLeadByPhone(r.phone)) {
+        skipped++;
+        return;
+      }
+      DB.insert('leads', { name: r.name, phone: r.phone, source: r.source, interestedService: r.interestedService, stage: 'New', notes: r.notes });
+      added++;
+    });
+    document.getElementById('leadImportResult').innerHTML = `
+      <div class="card card-pad" style="background:var(--success-dim); border-color:var(--success);">
+        <strong>Import complete.</strong> ${added} lead${added === 1 ? '' : 's'} added${skipped ? `, ${skipped} skipped as duplicates` : ''}.
+      </div>
+    `;
+    toast('Leads imported', 'success');
+    renderAll();
+  });
+
   // ---------- Add / Edit modal ----------
   function sourceSuggestions() {
     const values = [...new Set([...settings.leadSources, ...DB.getAll('leads').map((l) => l.source).filter(Boolean)])];
