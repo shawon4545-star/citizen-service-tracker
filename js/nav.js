@@ -8,6 +8,7 @@ const Shell = (() => {
       items: [
         { key: 'clients', href: 'clients.html', icon: '\u{1F465}', label: 'Clients' },
         { key: 'applications', href: 'applications.html', icon: '\u{1F4C4}', label: 'Applications' },
+        { key: 'reports', href: 'reports.html', icon: '\u{1F4CA}', label: 'Reports' },
         { key: 'import', href: 'import.html', icon: '\u{2B73}', label: 'Import' },
       ],
     },

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reports · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content">
+      <div class="card">
+        <div class="card-header">
+          <h2>By Service Type</h2>
+          <button class="btn btn-sm" id="btnExportReport">▤ Export Report</button>
+        </div>
+        <div class="table-wrap">
+          <table id="reportTable">
+            <thead>
+              <tr><th>Service Type</th><th>Applications</th><th>Completed</th><th>Open</th><th>Total Fee</th><th></th></tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+            <tfoot id="reportFoot"></tfoot>
+          </table>
+        </div>
+        <div id="reportEmpty" class="empty-state hidden">
+          <div class="icon">📊</div>
+          <div><strong>No applications yet</strong></div>
+          <div class="text-faint">Once you log applications, they'll be broken down here by service type.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker</footer>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth-gate.js"></script>
+<script>
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/reports.js']);
+</script>
+</body>
+</html>

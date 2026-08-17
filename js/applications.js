@@ -1,13 +1,16 @@
 (function () {
   Shell.init({ page: 'applications', title: 'Applications', sub: 'Every application across all clients' });
 
-  const state = { service: '', status: '', search: '' };
+  const urlService = new URLSearchParams(location.search).get('service') || '';
+  const state = { service: urlService, status: '', search: '' };
   const settings = DB.getSettings();
 
+  const serviceOptions = urlService && !settings.serviceTypes.includes(urlService) ? [urlService, ...settings.serviceTypes] : settings.serviceTypes;
   document.getElementById('filterService').innerHTML +=
-    settings.serviceTypes.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+    serviceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
   document.getElementById('filterStatus').innerHTML +=
     settings.statuses.map((s) => `<option value="${s}">${s}</option>`).join('');
+  document.getElementById('filterService').value = urlService;
 
   document.getElementById('filterService').addEventListener('change', (e) => {
     state.service = e.target.value;
