@@ -21,6 +21,7 @@ const Importer = (() => {
   const APPLICATION_FIELD_DEFS = [
     { key: 'appServiceType', label: 'Past Service / Work', aliases: ['service', 'servicetype', 'work', 'pastwork', 'pastservice'] },
     { key: 'appReference', label: 'Reference / Application No.', aliases: ['reference', 'referenceno', 'applicationno', 'appno'] },
+    { key: 'appAssessmentYear', label: 'Assessment Year', aliases: ['assessmentyear', 'ay'] },
     { key: 'appStatus', label: 'Status', aliases: ['status', 'appstatus'] },
     { key: 'appFee', label: 'Fee', aliases: ['fee', 'fees', 'amount', 'charge'] },
     { key: 'appSubmittedDate', label: 'Submitted Date', aliases: ['submitteddate', 'submitted', 'filingdate'] },
@@ -140,6 +141,7 @@ const Importer = (() => {
     return {
       serviceType: serviceType || 'Past Work',
       reference,
+      assessmentYear: cellToString(cell('appAssessmentYear')),
       status,
       fee: feeRaw === '' ? '' : parseFloat(feeRaw.replace(/[^\d.-]/g, '')) || '',
       submittedDate: cellToISODate(cell('appSubmittedDate')),

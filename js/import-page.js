@@ -3,6 +3,38 @@
 
   const state = { headers: [], dataRows: [], mapping: {}, appMapping: {} };
 
+  document.getElementById('btnDownloadTemplate').addEventListener('click', () => {
+    const cols = Importer.CLIENT_FIELD_DEFS.concat(Importer.APPLICATION_FIELD_DEFS).map((def) => ({
+      key: def.key,
+      label: def.label,
+      width: 20,
+    }));
+    const exampleRow = {
+      name: 'Md. Karim Uddin',
+      phone: '01712345678',
+      fatherName: 'Abdul Rahman',
+      motherName: 'Rashida Begum',
+      dob: '15-04-1985',
+      nid: '1234567890123',
+      tin: '123456789012',
+      email: 'karim@example.com',
+      address: 'House 12, Road 5, Dhanmondi, Dhaka',
+      portalPassword: 'MyPass123',
+      relation: 'Walk-in',
+      notes: 'Regular client',
+      appServiceType: 'Income Tax Return',
+      appReference: 'TIN-2025-00123',
+      appAssessmentYear: '2024-25',
+      appStatus: 'Completed',
+      appFee: '1500',
+      appSubmittedDate: '10-07-2024',
+      appDueDate: '30-11-2024',
+      appNotes: 'Filed on time',
+    };
+    Exporter.toExcel(cols, [exampleRow], 'Citizen-Service-Tracker-Import-Template.xlsx', 'Clients');
+    toast('Template downloaded', 'success');
+  });
+
   document.getElementById('fileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
