@@ -62,9 +62,20 @@ const BulkSms = (() => {
 
     try {
       const res = await fetch(url.toString());
-      const body = (await res.text()).trim();
-      const code = parseInt(body, 10);
-      return { ok: code === 202, response: CODES[code] || body || `HTTP ${res.status}`, code: Number.isNaN(code) ? null : code };
+      const raw = (await res.text()).trim();
+      // BulkSMSBD returns JSON: {"response_code":202,"message_id":...,"success_message":"...","error_message":"..."}
+      let code = null;
+      let message = raw || `HTTP ${res.status}`;
+      try {
+        const data = JSON.parse(raw);
+        code = Number(data.response_code);
+        message = data.success_message || data.error_message || CODES[code] || raw;
+      } catch (parseErr) {
+        code = parseInt(raw, 10);
+        if (Number.isNaN(code)) code = null;
+        message = CODES[code] || raw;
+      }
+      return { ok: code === 202, response: message, code };
     } catch (e) {
       return { ok: false, response: `Blocked or unreachable (${e.message}) — likely mixed-content or CORS restriction`, code: null };
     }
