@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Settings · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content content-narrow">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Business Details</h2></div>
+        <div class="card-pad">
+          <div class="field-row">
+            <div class="field"><label>Business / Office Name</label><input id="s_businessName" /></div>
+            <div class="field"><label>Business Phone</label><input id="s_businessPhone" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Address</label><input id="s_address" /></div>
+            <div class="field"><label>Default Country Code</label><input id="s_countryCode" placeholder="e.g. 880" /></div>
+          </div>
+          <p class="field-hint">Used to sign reminder messages and to build WhatsApp/SMS links from local phone numbers.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Service Types</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">The services you offer. These appear in the "Add Application" dropdown.</p>
+          <div id="serviceList" class="tag-list" style="margin-bottom:10px;"></div>
+          <div class="flex gap-8">
+            <input id="newServiceType" placeholder="e.g. Trade License" style="max-width:260px;" />
+            <button class="btn btn-sm" id="btnAddService">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Reminders</h2></div>
+        <div class="card-pad">
+          <div class="field">
+            <label>Default "Remind Me" Window (days before due date)</label>
+            <input id="s_defaultReminderLeadDays" type="number" min="0" style="max-width:140px;" />
+          </div>
+          <div class="field">
+            <label>Reminder Message Template</label>
+            <textarea id="s_reminderTemplate" rows="5"></textarea>
+            <div class="field-hint">
+              Placeholders: {clientName} {service} {reference} {dueDate} {daysLeftText} {businessName} {businessPhone} {address}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Cloud Sync (Google Drive)</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">Automatically back up this browser's data to a file in your Google Drive, and pull it down on other devices you sign in on. Requires a free Google OAuth Client ID you create yourself — <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">console.cloud.google.com/apis/credentials</a> → Create Credentials → OAuth client ID → Web application → add this page's URL under "Authorized JavaScript origins" → enable the Drive API for the project.</p>
+
+          <div id="driveDisconnected">
+            <div class="field" style="max-width:420px;">
+              <label>Google OAuth Client ID</label>
+              <input id="s_googleClientId" placeholder="xxxxxxxx.apps.googleusercontent.com" />
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="btnDriveConnect">☁ Connect Google Drive</button>
+            </div>
+          </div>
+
+          <div id="driveConnected" class="hidden">
+            <p><span id="driveStatusLine" class="badge badge-neutral"></span></p>
+            <div id="driveConflict" class="card card-pad hidden" style="background:var(--warning-dim); border-color:var(--warning); margin-bottom:12px;">
+              <strong>Sync conflict</strong>
+              <p class="text-dim" style="margin:6px 0;">The cloud copy changed on another device since this browser last synced. Choose which version to keep — the other will be overwritten.</p>
+              <div class="btn-row">
+                <button class="btn" id="btnKeepLocal">Keep this browser's data</button>
+                <button class="btn" id="btnUseCloud">Use cloud version</button>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn hidden" id="btnDriveReconnect">🔐 Reconnect Google Drive</button>
+              <button class="btn" id="btnDriveSyncNow">🔄 Sync Now</button>
+              <button class="btn btn-danger" id="btnDriveDisconnect">Disconnect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>Data Backup</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">All data lives only in this browser. Export a backup regularly, and after restoring keep it somewhere safe (e.g. cloud drive).</p>
+          <div class="btn-row">
+            <button class="btn" id="btnExportBackup">⭱ Export Backup (JSON)</button>
+            <button class="btn" id="btnImportBackup">⭳ Restore from Backup</button>
+            <input type="file" id="importFile" accept="application/json" class="hidden" />
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSaveSettings">💾 Save Settings</button>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker &middot; your data stays in this browser</footer>
+  </div>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/export.js"></script>
+<script src="js/drive-sync.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>

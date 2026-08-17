@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clients · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content">
+      <div class="filters-bar">
+        <div class="field grow">
+          <label>Search</label>
+          <input type="text" id="filterSearch" placeholder="Search name, phone, NID..." />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn" id="filterReset">✕ Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 id="tableTitle">All Clients</h2>
+          <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
+        </div>
+        <div class="table-wrap">
+          <table id="dataTable">
+            <thead>
+              <tr><th>Name</th><th>Phone</th><th>TIN</th><th>Relation</th><th class="num">Applications</th><th>Added</th><th></th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state hidden">
+          <div class="icon">👥</div>
+          <div><strong>No clients yet</strong></div>
+          <div class="text-faint">Add your first client to start tracking their applications.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker &middot; your data stays in this browser</footer>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="js/db.js"></script>
+<script src="js/export.js"></script>
+<script src="js/drive-sync.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/clients.js"></script>
+</body>
+</html>

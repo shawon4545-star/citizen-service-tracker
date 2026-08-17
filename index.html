@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content">
+      <div id="onboarding"></div>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <h2>Upcoming Due Dates</h2>
+          <a href="reminders.html" style="font-size:12.5px;">Open Reminders →</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Client</th><th>Service</th><th>Status</th><th>Due Date</th><th>Urgency</th><th></th></tr>
+            </thead>
+            <tbody id="dueBody"></tbody>
+          </table>
+        </div>
+        <div id="dueEmpty" class="empty-state hidden">
+          <div class="icon">✅</div>
+          <div><strong>Nothing due soon</strong></div>
+          <div class="text-faint">Applications with a due date will show up here as they approach.</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h2>Recent Clients</h2>
+            <a href="clients.html" style="font-size:12.5px;">View all →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Phone</th><th>Added</th></tr></thead>
+              <tbody id="recentClientsBody"></tbody>
+            </table>
+          </div>
+          <div id="recentClientsEmpty" class="empty-state hidden">
+            <div class="icon">🗒️</div>
+            <div><strong>No clients yet</strong></div>
+            <div class="text-faint">Add your first client to get started.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>By Service Type</h2></div>
+          <div class="card-pad" id="serviceSummary"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker &middot; your data stays in this browser</footer>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="js/db.js"></script>
+<script src="js/export.js"></script>
+<script src="js/drive-sync.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

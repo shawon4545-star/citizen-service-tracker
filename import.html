@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Import · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content content-narrow">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><h2>1. Choose File</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">Upload an Excel (.xlsx/.xls) or CSV export of your client list. The first row should be column headers.</p>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+          <div id="fileStatus" class="field-hint"></div>
+        </div>
+      </div>
+
+      <div id="mappingSection" class="hidden">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header"><h2>2. Match Client Columns</h2></div>
+          <div class="card-pad">
+            <p class="text-dim mt-0">We matched what we could recognize from your headers. Adjust any that look wrong, or leave "Not mapped" to skip a field.</p>
+            <div id="mappingFields" class="field-row" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header"><h2>3. Match Past Work / Fees (optional)</h2></div>
+          <div class="card-pad">
+            <p class="text-dim mt-0">If your sheet also has each client's past service, fee or file status, map those columns here. A completed application record is created per row that has any of these filled in.</p>
+            <div id="mappingFieldsApp" class="field-row" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header">
+            <h2>4. Preview</h2>
+            <span class="text-dim" id="previewCount" style="font-size:12px;"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead id="previewHead"></thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>5. Import</h2></div>
+          <div class="card-pad">
+            <div class="field">
+              <label><input type="checkbox" id="updateExisting" style="width:auto; display:inline-block; margin-right:6px;" />Update existing clients when the phone number already matches, instead of skipping them</label>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="btnImport">⭳ Import Clients</button>
+            </div>
+            <div id="importResult" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker &middot; your data stays in this browser</footer>
+  </div>
+</div>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/export.js"></script>
+<script src="js/drive-sync.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/importer.js"></script>
+<script src="js/import-page.js"></script>
+</body>
+</html>
