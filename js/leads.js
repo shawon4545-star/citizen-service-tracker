@@ -1,0 +1,284 @@
+(function () {
+  const state = { stage: '', search: '', editingId: null };
+  const settings = DB.getSettings();
+
+  const actionsRoot = Shell.init({ page: 'leads', title: 'Leads', sub: 'Prospective clients — track and follow up before they convert' });
+  actionsRoot.innerHTML = `
+    <button class="btn" id="btnExportExcel">▤ Export Excel</button>
+    <button class="btn btn-primary" id="btnAdd">+ Add Lead</button>
+  `;
+  document.getElementById('btnAdd').addEventListener('click', () => openFormModal());
+  document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
+
+  document.getElementById('filterStage').innerHTML +=
+    settings.leadStages.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+
+  document.getElementById('filterStage').addEventListener('change', (e) => {
+    state.stage = e.target.value;
+    renderAll();
+  });
+  document.getElementById('filterSearch').addEventListener('input', (e) => {
+    state.search = e.target.value.toLowerCase();
+    renderAll();
+  });
+  document.getElementById('filterReset').addEventListener('click', () => {
+    state.stage = '';
+    state.search = '';
+    document.getElementById('filterStage').value = '';
+    document.getElementById('filterSearch').value = '';
+    renderAll();
+  });
+
+  function normalizePhoneDigits(phone) {
+    return String(phone || '').replace(/\D/g, '');
+  }
+
+  function findLeadByPhone(phone) {
+    const digits = normalizePhoneDigits(phone);
+    if (!digits) return null;
+    return DB.getAll('leads').find((l) => normalizePhoneDigits(l.phone) === digits) || null;
+  }
+
+  function getFilteredRows() {
+    const rows = DB.getAll('leads');
+    return rows
+      .filter((r) => (state.stage ? r.stage === state.stage : true))
+      .filter((r) => {
+        if (!state.search) return true;
+        const hay = [r.name, r.phone, r.source, r.interestedService, r.notes].join(' ').toLowerCase();
+        return hay.includes(state.search);
+      })
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  }
+
+  function renderTable(rows) {
+    const body = document.getElementById('tableBody');
+
+    if (!rows.length) {
+      body.innerHTML = '';
+      document.getElementById('emptyState').classList.remove('hidden');
+      document.getElementById('dataTable').classList.add('hidden');
+    } else {
+      document.getElementById('emptyState').classList.add('hidden');
+      document.getElementById('dataTable').classList.remove('hidden');
+      body.innerHTML = rows
+        .map((r) => {
+          const isClosed = settings.leadClosedStages.includes(r.stage);
+          return `
+        <tr>
+          <td>${Exporter.escapeHtml(r.name || '—')}</td>
+          <td>${Exporter.escapeHtml(r.phone || '—')}</td>
+          <td class="text-faint">${Exporter.escapeHtml(r.source || '—')}</td>
+          <td class="text-faint">${Exporter.escapeHtml(r.interestedService || '—')}</td>
+          <td><span class="badge ${DB.leadStageBadgeClass[r.stage] || 'badge-neutral'}">${Exporter.escapeHtml(r.stage || 'New')}</span></td>
+          <td>${r.createdAt ? DB.fmtDate(r.createdAt.slice(0, 10)) : '—'}</td>
+          <td>
+            <div class="row-actions">
+              ${r.phone ? `<a class="btn btn-whatsapp btn-sm btn-icon" target="_blank" rel="noopener" title="WhatsApp" href="${DB.waLink(r.phone, `Hello ${r.name || ''}, this is ${settings.businessName}.`)}">💬</a>` : ''}
+              ${!isClosed ? `<button class="btn btn-ghost btn-sm btn-icon" data-convert="${r.id}" title="Convert to Client">➜👤</button>` : ''}
+              <button class="btn btn-ghost btn-sm btn-icon" data-edit="${r.id}" title="Edit">✎</button>
+              <button class="btn btn-ghost btn-sm btn-icon" data-del="${r.id}" title="Delete">🗑</button>
+            </div>
+          </td>
+        </tr>`;
+        })
+        .join('');
+
+      body.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openFormModal(btn.getAttribute('data-edit'))));
+      body.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', () => deleteRow(btn.getAttribute('data-del'))));
+      body.querySelectorAll('[data-convert]').forEach((btn) => btn.addEventListener('click', () => convertToClient(btn.getAttribute('data-convert'))));
+    }
+
+    document.getElementById('recordCount').textContent = `${rows.length} lead${rows.length === 1 ? '' : 's'}`;
+  }
+
+  function deleteRow(id) {
+    if (!confirmAction('Delete this lead? This cannot be undone.')) return;
+    DB.remove('leads', id);
+    toast('Lead deleted', 'success');
+    renderAll();
+  }
+
+  function convertToClient(id) {
+    const lead = DB.getAll('leads').find((l) => l.id === id);
+    if (!lead) return;
+    if (!lead.phone) {
+      toast('This lead needs a phone number before converting', 'danger');
+      return;
+    }
+    const existing = DB.findClientByPhone(lead.phone);
+    if (existing) {
+      if (!confirmAction(`A client with this phone number already exists (${existing.name}). Just mark this lead as Converted?`)) return;
+      DB.update('leads', id, { stage: 'Converted' });
+      toast('Lead marked as converted', 'success');
+      renderAll();
+      return;
+    }
+    if (!confirmAction(`Create a new client "${lead.name || lead.phone}" from this lead?`)) return;
+    const client = DB.insert('clients', {
+      name: lead.name || lead.phone,
+      phone: lead.phone,
+      relation: lead.source || '',
+      notes: lead.notes || '',
+    });
+    DB.update('leads', id, { stage: 'Converted' });
+    toast('Converted to client', 'success');
+    location.href = `client-detail.html?id=${client.id}`;
+  }
+
+  function renderAll() {
+    renderTable(getFilteredRows());
+  }
+
+  // ---------- Quick paste-add ----------
+  function parsePastedLeads(text) {
+    return text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split(',').map((p) => p.trim()).filter(Boolean);
+        let phone = '';
+        let rest = '';
+        parts.forEach((p) => {
+          if (!phone && normalizePhoneDigits(p).length >= 10) phone = p;
+          else if (!rest) rest = p;
+        });
+        if (!phone && parts.length === 1) phone = parts[0];
+        return { phone, name: rest };
+      })
+      .filter((r) => r.phone);
+  }
+
+  document.getElementById('btnPasteAdd').addEventListener('click', () => {
+    const text = document.getElementById('pasteBox').value;
+    const parsed = parsePastedLeads(text);
+    if (!parsed.length) {
+      toast('No phone numbers found in the pasted text', 'danger');
+      return;
+    }
+    let added = 0;
+    let skipped = 0;
+    parsed.forEach((p) => {
+      if (findLeadByPhone(p.phone)) {
+        skipped++;
+        return;
+      }
+      DB.insert('leads', { name: p.name || '', phone: p.phone, source: '', interestedService: '', stage: 'New', notes: '' });
+      added++;
+    });
+    document.getElementById('pasteBox').value = '';
+    toast(`${added} lead${added === 1 ? '' : 's'} added${skipped ? `, ${skipped} skipped as duplicates` : ''}`, 'success');
+    renderAll();
+  });
+
+  // ---------- Add / Edit modal ----------
+  function sourceSuggestions() {
+    const values = [...new Set([...settings.leadSources, ...DB.getAll('leads').map((l) => l.source).filter(Boolean)])];
+    return values.map((v) => `<option value="${Exporter.escapeHtml(v)}"></option>`).join('');
+  }
+
+  function openFormModal(id) {
+    state.editingId = id || null;
+    const record = id ? DB.getAll('leads').find((l) => l.id === id) : null;
+
+    const modalRoot = document.getElementById('modalRoot');
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>${record ? 'Edit Lead' : 'Add Lead'}</h3>
+            <button class="btn btn-ghost btn-icon" id="modalClose">✕</button>
+          </div>
+          <div class="modal-body">
+            <form id="entryForm">
+              <div class="field-row">
+                <div class="field"><label>Name</label><input id="field_name" value="${Exporter.escapeHtml(record?.name || '')}" /></div>
+                <div class="field"><label>Phone *</label><input id="field_phone" value="${Exporter.escapeHtml(record?.phone || '')}" required /></div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>Source</label>
+                  <input id="field_source" list="sourceSuggestions" placeholder="e.g. Referral, Facebook" value="${Exporter.escapeHtml(record?.source || '')}" />
+                  <datalist id="sourceSuggestions">${sourceSuggestions()}</datalist>
+                </div>
+                <div class="field">
+                  <label>Interested In</label>
+                  <select id="field_interestedService">
+                    <option value="">— Not specified —</option>
+                    ${settings.serviceTypes.map((s) => `<option value="${Exporter.escapeHtml(s)}" ${s === record?.interestedService ? 'selected' : ''}>${Exporter.escapeHtml(s)}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label>Stage</label>
+                <select id="field_stage">
+                  ${settings.leadStages.map((s) => `<option value="${Exporter.escapeHtml(s)}" ${s === (record?.stage || 'New') ? 'selected' : ''}>${Exporter.escapeHtml(s)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="field"><label>Notes</label><textarea id="field_notes" rows="3">${Exporter.escapeHtml(record?.notes || '')}</textarea></div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" id="modalCancel">Cancel</button>
+            <button class="btn btn-primary" id="modalSave">${record ? 'Save Changes' : 'Add Lead'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const close = () => (modalRoot.innerHTML = '');
+    document.getElementById('modalClose').addEventListener('click', close);
+    document.getElementById('modalCancel').addEventListener('click', close);
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modalOverlay') close();
+    });
+    document.getElementById('modalSave').addEventListener('click', () => {
+      if (saveForm()) close();
+    });
+  }
+
+  function saveForm() {
+    const phone = document.getElementById('field_phone').value.trim();
+    if (!phone) {
+      toast('"Phone" is required', 'danger');
+      return false;
+    }
+    const data = {
+      name: document.getElementById('field_name').value.trim(),
+      phone,
+      source: document.getElementById('field_source').value.trim(),
+      interestedService: document.getElementById('field_interestedService').value,
+      stage: document.getElementById('field_stage').value,
+      notes: document.getElementById('field_notes').value.trim(),
+    };
+
+    if (state.editingId) {
+      DB.update('leads', state.editingId, data);
+      toast('Lead updated', 'success');
+    } else {
+      DB.insert('leads', data);
+      toast('Lead added', 'success');
+    }
+    renderAll();
+    return true;
+  }
+
+  // ---------- Export ----------
+  function exportExcel() {
+    const rows = getFilteredRows();
+    if (!rows.length) return toast('No leads to export', 'danger');
+    const cols = [
+      { key: 'name', label: 'Name', width: 22 },
+      { key: 'phone', label: 'Phone', width: 16 },
+      { key: 'source', label: 'Source', width: 18 },
+      { key: 'interestedService', label: 'Interested In', width: 20 },
+      { key: 'stage', label: 'Stage', width: 14 },
+      { key: 'notes', label: 'Notes', width: 28 },
+    ];
+    Exporter.toExcel(cols, rows, `Leads-${DB.todayISO()}.xlsx`, 'Leads');
+    toast('Excel file downloaded', 'success');
+  }
+
+  renderAll();
+})();

@@ -5,6 +5,7 @@ const DB = (() => {
     clients: 'cst_clients',
     applications: 'cst_applications',
     documents: 'cst_documents',
+    leads: 'cst_leads',
     settings: 'cst_settings',
   };
 
@@ -72,6 +73,9 @@ const DB = (() => {
       serviceTypes: ['Income Tax Return', 'Land Mutation', 'Passport Application', 'Birth Certificate'],
       statuses: ['Pending', 'Documents Collected', 'Submitted', 'In Process', 'Ready for Collection', 'Approved', 'Completed', 'Rejected'],
       closedStatuses: ['Completed', 'Rejected'],
+      leadStages: ['New', 'Contacted', 'Interested', 'Follow-up', 'Converted', 'Not Interested'],
+      leadClosedStages: ['Converted', 'Not Interested'],
+      leadSources: ['Cold List', 'Referral', 'Facebook', 'Walk-in Inquiry', 'Other'],
       defaultReminderLeadDays: 7,
       reminderTemplate:
         'Dear {clientName}, this is a reminder from {businessName} that your {service}' +
@@ -184,6 +188,15 @@ const DB = (() => {
     Rejected: 'badge-danger',
   };
 
+  const leadStageBadgeClass = {
+    New: 'badge-neutral',
+    Contacted: 'badge-info',
+    Interested: 'badge-warning',
+    'Follow-up': 'badge-warning',
+    Converted: 'badge-success',
+    'Not Interested': 'badge-danger',
+  };
+
   // ---------- Phone / messaging ----------
   /** Normalizes a local or international phone number into digits-only, country-code-prefixed form for wa.me / sms: links. */
   function normalizePhone(phone) {
@@ -286,6 +299,7 @@ const DB = (() => {
     bucketLabel,
     bucketBadgeClass,
     statusBadgeClass,
+    leadStageBadgeClass,
     normalizePhone,
     assessmentYearFor,
     recentAssessmentYears,

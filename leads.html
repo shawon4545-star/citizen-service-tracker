@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leads · Citizen Service Tracker</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app-shell" id="app-shell">
+  <div class="main">
+    <div class="topbar" id="topbar-root"></div>
+
+    <div class="content">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <h2>Quick Add from a List</h2>
+        </div>
+        <div class="card-pad">
+          <p class="text-dim mt-0">Paste one prospect per line — just a phone number, or "Name, Phone" / "Phone, Source". Duplicate phone numbers already in your leads are skipped automatically.</p>
+          <textarea id="pasteBox" rows="4" placeholder="01712345678&#10;Karim, 01812345678&#10;01912345678, Facebook"></textarea>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn btn-primary" id="btnPasteAdd">+ Add Pasted Numbers</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-bar">
+        <div class="field">
+          <label>Stage</label>
+          <select id="filterStage"><option value="">All</option></select>
+        </div>
+        <div class="field grow">
+          <label>Search</label>
+          <input type="text" id="filterSearch" placeholder="Search name, phone, source..." />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn" id="filterReset">✕ Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 id="tableTitle">All Leads</h2>
+          <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
+        </div>
+        <div class="table-wrap">
+          <table id="dataTable">
+            <thead>
+              <tr><th>Name</th><th>Phone</th><th>Source</th><th>Interested In</th><th>Stage</th><th>Added</th><th></th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state hidden">
+          <div class="icon">🎯</div>
+          <div><strong>No leads yet</strong></div>
+          <div class="text-faint">Paste a list of numbers above, or add one manually to start your pipeline.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">Citizen Service Tracker</footer>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth-gate.js"></script>
+<script>
+  AppAuth.requireAuthThenLoad(['js/db.js', 'js/export.js', 'js/drive-sync.js', 'js/nav.js', 'js/leads.js']);
+</script>
+</body>
+</html>

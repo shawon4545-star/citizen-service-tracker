@@ -12,7 +12,17 @@
     <div class="topbar" id="topbar-root"></div>
 
     <div class="content">
-      <div class="filters-bar">
+      <div class="filters-bar" style="margin-bottom:10px;">
+        <div class="field">
+          <label>Audience</label>
+          <select id="filterAudience">
+            <option value="clients">Clients</option>
+            <option value="leads">Leads</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filters-bar" id="clientFilters">
         <div class="field">
           <label>Service Type</label>
           <select id="filterService"><option value="">All</option></select>
@@ -32,6 +42,21 @@
         <div class="field">
           <label>&nbsp;</label>
           <button class="btn" id="filterReset">✕ Reset</button>
+        </div>
+      </div>
+
+      <div class="filters-bar hidden" id="leadFilters">
+        <div class="field">
+          <label>Stage</label>
+          <select id="filterStage"><option value="">All</option></select>
+        </div>
+        <div class="field grow">
+          <label>Search</label>
+          <input type="text" id="filterSearchLeads" placeholder="Search lead, phone..." />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn" id="filterResetLeads">✕ Reset</button>
         </div>
       </div>
 
@@ -64,7 +89,7 @@
 
       <div class="card">
         <div class="card-header">
-          <h2>Matching Clients</h2>
+          <h2 id="matchingTitle">Matching Clients</h2>
           <div class="flex gap-8">
             <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
             <button class="btn btn-sm" id="btnExportList">▤ Export List</button>
@@ -73,15 +98,15 @@
         <div class="table-wrap">
           <table id="dataTable">
             <thead>
-              <tr><th>Client</th><th>Phone</th><th>Matching Service(s)</th><th></th></tr>
+              <tr><th id="colName">Client</th><th>Phone</th><th id="colDetail">Matching Service(s)</th><th></th></tr>
             </thead>
             <tbody id="tableBody"></tbody>
           </table>
         </div>
         <div id="emptyState" class="empty-state hidden">
           <div class="icon">📢</div>
-          <div><strong>No matching clients</strong></div>
-          <div class="text-faint">Adjust the filters above to find clients to contact.</div>
+          <div><strong>No matching contacts</strong></div>
+          <div class="text-faint">Adjust the filters above to find people to contact.</div>
         </div>
       </div>
     </div>
