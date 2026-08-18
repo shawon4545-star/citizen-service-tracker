@@ -105,6 +105,48 @@
 
   document.getElementById('messageTemplate').addEventListener('input', render);
 
+  // ---------- SMS length / segment count ----------
+  // Standard GSM-7 vs Unicode SMS segmentation rules: a message using only the GSM 03.38 alphabet fits
+  // 160 chars in a single SMS (153/part once it splits into multiple parts); anything with characters
+  // outside that set (e.g. Bengali script, emoji) is sent as Unicode, which only fits 70 (67/part).
+  const GSM_BASIC = '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà';
+  const GSM_EXTENDED = '^{}\\[~]|€';
+
+  function smsSegmentInfo(text) {
+    text = text || '';
+    let isGsm7 = true;
+    let gsmLength = 0;
+    for (const ch of text) {
+      if (GSM_EXTENDED.includes(ch)) {
+        gsmLength += 2;
+      } else if (GSM_BASIC.includes(ch)) {
+        gsmLength += 1;
+      } else {
+        isGsm7 = false;
+        break;
+      }
+    }
+    const chars = isGsm7 ? gsmLength : [...text].length;
+    const singleLimit = isGsm7 ? 160 : 70;
+    const multiLimit = isGsm7 ? 153 : 67;
+    const segments = chars === 0 ? 0 : chars <= singleLimit ? 1 : Math.ceil(chars / multiLimit);
+    return { chars, segments, unicode: !isGsm7 };
+  }
+
+  function updateMessageLength() {
+    const template = document.getElementById('messageTemplate').value;
+    const sample = currentRows()[0];
+    const text = sample ? messageFor(sample) : template;
+    const info = smsSegmentInfo(text);
+    const box = document.getElementById('messageLength');
+    if (!text) {
+      box.textContent = '';
+      return;
+    }
+    const suffix = sample ? ` — preview for ${nameFor(sample) || sample.phone}${info.unicode ? ' (contains non-English characters, uses smaller SMS parts)' : ''}` : '';
+    box.textContent = `Length: ${info.chars}/${info.segments} (characters/SMS part${info.segments === 1 ? '' : 's'})${suffix}`;
+  }
+
   function daysSince(dateStr) {
     return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   }
@@ -341,6 +383,7 @@
     updateSelectionUI(baseRows);
     refreshBulkSmsAvailability();
     refreshWaAvailability();
+    updateMessageLength();
   }
 
   function updateSelectionUI(baseRows) {
