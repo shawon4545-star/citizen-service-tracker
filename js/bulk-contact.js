@@ -1,7 +1,7 @@
 (function () {
   Shell.init({ page: 'bulk-contact', title: 'Bulk Contact', sub: 'Message every client or lead matching your filters in one place' });
 
-  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', source: '', leadSearch: '', contacted: '', selectedIds: new Set() };
+  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', source: '', leadSearch: '', contacted: '', selectedIds: new Set(), showSelectedOnly: false };
   const settings = DB.getSettings();
   const clients = DB.getAll('clients');
   const clientsById = Object.fromEntries(clients.map((c) => [c.id, c]));
@@ -40,6 +40,7 @@
     document.getElementById('colDetail').textContent = isLeads ? 'Stage / Source' : 'Matching Service(s)';
     document.getElementById('messageTemplate').value = isLeads ? MESSAGES.leads : MESSAGES.clients;
     state.selectedIds.clear();
+    state.showSelectedOnly = false;
     refreshBulkSmsAvailability();
     render();
   });
@@ -254,13 +255,19 @@
   }
 
   function render() {
-    const rows = currentRows();
+    const baseRows = currentRows();
 
-    const visibleIds = new Set(rows.map((r) => r.id));
+    const visibleIds = new Set(baseRows.map((r) => r.id));
     // Drop selections that fell out of the current filter so the counter / "select all" stay honest.
     state.selectedIds.forEach((id) => {
       if (!visibleIds.has(id)) state.selectedIds.delete(id);
     });
+    if (state.showSelectedOnly && !state.selectedIds.size) state.showSelectedOnly = false;
+
+    // "#" always reflects each contact's position in the full filtered list, even when the table
+    // below is narrowed down to just the selected rows — so a range like "20 to 30" stays meaningful.
+    const serials = new Map(baseRows.map((r, i) => [r.id, i + 1]));
+    const rows = state.showSelectedOnly ? baseRows.filter((r) => state.selectedIds.has(r.id)) : baseRows;
 
     if (!rows.length) {
       document.getElementById('tableBody').innerHTML = '';
@@ -270,7 +277,7 @@
       document.getElementById('emptyState').classList.add('hidden');
       document.getElementById('dataTable').classList.remove('hidden');
       document.getElementById('tableBody').innerHTML = rows
-        .map((item, i) => {
+        .map((item) => {
           const message = messageFor(item);
           const href = linkFor(item);
           const nameCell = href
@@ -286,7 +293,7 @@
           const checked = state.selectedIds.has(item.id) ? 'checked' : '';
           return `
         <tr>
-          <td class="text-faint" style="font-size:12px;">${i + 1}</td>
+          <td class="text-faint" style="font-size:12px;">${serials.get(item.id)}</td>
           <td><input type="checkbox" class="row-select" data-id="${item.id}" ${checked} /></td>
           <td>${nameCell}</td>
           <td>${Exporter.escapeHtml(item.phone || '—')}</td>
@@ -322,25 +329,31 @@
         cb.addEventListener('change', () => {
           if (cb.checked) state.selectedIds.add(cb.getAttribute('data-id'));
           else state.selectedIds.delete(cb.getAttribute('data-id'));
-          updateSelectionUI(rows);
+          render();
         })
       );
     }
-    document.getElementById('recordCount').textContent = `${rows.length} ${state.audience === 'leads' ? 'lead' : 'client'}${rows.length === 1 ? '' : 's'}`;
-    updateSelectionUI(rows);
+    const noun = state.audience === 'leads' ? 'lead' : 'client';
+    document.getElementById('recordCount').textContent = state.showSelectedOnly
+      ? `${rows.length} of ${baseRows.length} ${noun}${baseRows.length === 1 ? '' : 's'} (selected only)`
+      : `${rows.length} ${noun}${rows.length === 1 ? '' : 's'}`;
+    updateSelectionUI(baseRows);
     refreshBulkSmsAvailability();
   }
 
-  function updateSelectionUI(rows) {
+  function updateSelectionUI(baseRows) {
     const selectAll = document.getElementById('selectAll');
-    selectAll.checked = rows.length > 0 && rows.every((r) => state.selectedIds.has(r.id));
-    selectAll.indeterminate = !selectAll.checked && rows.some((r) => state.selectedIds.has(r.id));
+    selectAll.checked = baseRows.length > 0 && baseRows.every((r) => state.selectedIds.has(r.id));
+    selectAll.indeterminate = !selectAll.checked && baseRows.some((r) => state.selectedIds.has(r.id));
 
     const count = state.selectedIds.size;
     document.getElementById('selectedCount').classList.toggle('hidden', count === 0);
     document.getElementById('selectedCount').textContent = `${count} selected`;
     document.getElementById('btnClearSelection').classList.toggle('hidden', count === 0);
     document.getElementById('btnMarkSelectedKnocked').classList.toggle('hidden', count === 0);
+    const toggleBtn = document.getElementById('btnToggleShowSelected');
+    toggleBtn.classList.toggle('hidden', count === 0);
+    toggleBtn.textContent = state.showSelectedOnly ? '👁 Show All' : '👁 Show Selected Only';
   }
 
   document.getElementById('selectAll').addEventListener('change', (e) => {
@@ -367,8 +380,14 @@
     render();
   });
 
+  document.getElementById('btnToggleShowSelected').addEventListener('click', () => {
+    state.showSelectedOnly = !state.showSelectedOnly;
+    render();
+  });
+
   document.getElementById('btnClearSelection').addEventListener('click', () => {
     state.selectedIds.clear();
+    state.showSelectedOnly = false;
     render();
   });
 
