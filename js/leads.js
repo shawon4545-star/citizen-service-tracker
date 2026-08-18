@@ -1,5 +1,5 @@
 (function () {
-  const state = { stage: '', search: '', editingId: null, selectedIds: new Set() };
+  const state = { stage: '', source: '', search: '', editingId: null, selectedIds: new Set() };
   const settings = DB.getSettings();
 
   const actionsRoot = Shell.init({ page: 'leads', title: 'Leads', sub: 'Prospective clients — track and follow up before they convert' });
@@ -12,9 +12,18 @@
 
   document.getElementById('filterStage').innerHTML +=
     settings.leadStages.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+  // Include both the configured presets and whatever source values actually appear in the data —
+  // imports often bring in source labels (e.g. "BPBS 2823") that don't match a preset.
+  const sourceOptions = [...new Set([...settings.leadSources, ...DB.getAll('leads').map((l) => l.source).filter(Boolean)])].sort();
+  document.getElementById('filterSource').innerHTML +=
+    sourceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
 
   document.getElementById('filterStage').addEventListener('change', (e) => {
     state.stage = e.target.value;
+    renderAll();
+  });
+  document.getElementById('filterSource').addEventListener('change', (e) => {
+    state.source = e.target.value;
     renderAll();
   });
   document.getElementById('filterSearch').addEventListener('input', (e) => {
@@ -23,8 +32,10 @@
   });
   document.getElementById('filterReset').addEventListener('click', () => {
     state.stage = '';
+    state.source = '';
     state.search = '';
     document.getElementById('filterStage').value = '';
+    document.getElementById('filterSource').value = '';
     document.getElementById('filterSearch').value = '';
     renderAll();
   });
@@ -43,6 +54,7 @@
     const rows = DB.getAll('leads');
     return rows
       .filter((r) => (state.stage ? r.stage === state.stage : true))
+      .filter((r) => (state.source ? r.source === state.source : true))
       .filter((r) => {
         if (!state.search) return true;
         const hay = [r.name, r.phone, r.source, r.interestedService, r.notes].join(' ').toLowerCase();
