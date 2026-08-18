@@ -33,6 +33,9 @@ const Importer = (() => {
     { key: 'phone', label: 'Phone / Mobile', required: true, aliases: ['mobile', 'phone', 'mobileno', 'contact', 'cell', 'mobilenumber', 'mobile1'] },
     { key: 'source', label: 'Source', aliases: ['source', 'referral', 'ref', 'category'] },
     { key: 'interestedService', label: 'Interested In', aliases: ['interestedin', 'service', 'servicetype', 'interest'] },
+    { key: 'knock1At', label: 'Knock 1 Date', aliases: ['knock1date', 'knock1', 'firstknockdate', 'firstknock'] },
+    { key: 'knock2At', label: 'Knock 2 Date', aliases: ['knock2date', 'knock2', 'secondknockdate', 'secondknock'] },
+    { key: 'knock3At', label: 'Knock 3 Date', aliases: ['knock3date', 'knock3', 'thirdknockdate', 'thirdknock'] },
     { key: 'notes', label: 'Notes', aliases: ['notes', 'note', 'remarks', 'comment', 'comments', 'businessname'] },
   ];
 
@@ -151,14 +154,20 @@ const Importer = (() => {
   }
 
   /** Builds a lead record (raw field values, not yet inserted) from a raw data row + column mapping. */
+  const LEAD_DATE_FIELDS = ['knock1At', 'knock2At', 'knock3At'];
+
   function buildLeadFromRow(row, mapping) {
     const record = {};
     LEAD_FIELD_DEFS.forEach((def) => {
       const idx = mapping[def.key];
       if (idx < 0 || idx >= row.length) {
         record[def.key] = '';
+      } else if (def.key === 'phone') {
+        record[def.key] = cellToPhoneString(row[idx]);
+      } else if (LEAD_DATE_FIELDS.includes(def.key)) {
+        record[def.key] = cellToISODate(row[idx]);
       } else {
-        record[def.key] = def.key === 'phone' ? cellToPhoneString(row[idx]) : cellToString(row[idx]);
+        record[def.key] = cellToString(row[idx]);
       }
     });
     return record;

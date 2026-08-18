@@ -224,6 +224,9 @@
       phone: '01712345678',
       source: 'Referral',
       interestedService: 'Income Tax Return',
+      knock1At: '2026-08-01',
+      knock2At: '',
+      knock3At: '',
       notes: 'Met at BPBS meeting, interested in filing this year',
     };
     Exporter.toExcel(cols, [exampleRow], 'Citizen-Service-Tracker-Leads-Template.xlsx', 'Leads');
@@ -306,19 +309,45 @@
     }
     const rows = leadImportUsableRows();
     let added = 0;
+    let updated = 0;
     let skipped = 0;
     rows.forEach((row) => {
       const r = Importer.buildLeadFromRow(row, importState.mapping);
-      if (findLeadByPhone(r.phone)) {
-        skipped++;
+      const hasKnockData = Boolean(r.knock1At || r.knock2At || r.knock3At);
+      const existing = findLeadByPhone(r.phone);
+
+      if (existing) {
+        // Already a lead — only fill in knock dates this row has that the existing record doesn't
+        // already have, so backfilling history never overwrites a real date with a blank or another date.
+        const patch = {};
+        if (r.knock1At && !existing.knock1At && !existing.lastContactedAt) patch.knock1At = r.knock1At;
+        if (r.knock2At && !existing.knock2At) patch.knock2At = r.knock2At;
+        if (r.knock3At && !existing.knock3At) patch.knock3At = r.knock3At;
+        if (Object.keys(patch).length) {
+          DB.update('leads', existing.id, patch);
+          updated++;
+        } else {
+          skipped++;
+        }
         return;
       }
-      DB.insert('leads', { name: r.name, phone: r.phone, source: r.source, interestedService: r.interestedService, stage: 'New', notes: r.notes });
+
+      DB.insert('leads', {
+        name: r.name,
+        phone: r.phone,
+        source: r.source,
+        interestedService: r.interestedService,
+        stage: hasKnockData ? 'Contacted' : 'New',
+        notes: r.notes,
+        knock1At: r.knock1At,
+        knock2At: r.knock2At,
+        knock3At: r.knock3At,
+      });
       added++;
     });
     document.getElementById('leadImportResult').innerHTML = `
       <div class="card card-pad" style="background:var(--success-dim); border-color:var(--success);">
-        <strong>Import complete.</strong> ${added} lead${added === 1 ? '' : 's'} added${skipped ? `, ${skipped} skipped as duplicates` : ''}.
+        <strong>Import complete.</strong> ${added} lead${added === 1 ? '' : 's'} added${updated ? `, ${updated} existing lead(s) had knock dates backfilled` : ''}${skipped ? `, ${skipped} skipped as duplicates with nothing new` : ''}.
       </div>
     `;
     toast('Leads imported', 'success');

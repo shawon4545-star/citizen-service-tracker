@@ -102,33 +102,68 @@
 
   document.getElementById('messageTemplate').addEventListener('input', render);
 
-  function daysSince(iso) {
-    return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  function daysSince(dateStr) {
+    return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   }
 
-  function daysAgoLabel(iso) {
-    const days = daysSince(iso);
+  function daysAgoLabel(dateStr) {
+    const days = daysSince(dateStr);
     if (days <= 0) return 'today';
     if (days === 1) return '1 day ago';
     return `${days} days ago`;
   }
 
+  const KNOCK_FIELDS = ['knock1At', 'knock2At', 'knock3At'];
+
+  /** [knock1, knock2, knock3] date strings ('' if not yet knocked). Folds the earlier single-knock
+      "lastContactedAt" field in as Knock 1 for contacts marked before this 3-knock tracking existed. */
+  function knockDates(item) {
+    return [item.knock1At || item.lastContactedAt || '', item.knock2At || '', item.knock3At || ''];
+  }
+
+  function knockCount(item) {
+    return knockDates(item).filter(Boolean).length;
+  }
+
+  function lastKnockDate(item) {
+    const dates = knockDates(item).filter(Boolean);
+    return dates.length ? dates.sort().slice(-1)[0] : '';
+  }
+
+  /** Index (0/1/2) of the next empty knock slot, or null if all 3 are already filled. */
+  function nextKnockSlot(item) {
+    const idx = knockDates(item).findIndex((d) => !d);
+    return idx === -1 ? null : idx;
+  }
+
   function matchesContacted(item) {
-    if (state.contacted === 'yes') return Boolean(item.lastContactedAt);
-    if (state.contacted === 'no') return !item.lastContactedAt;
+    const count = knockCount(item);
+    if (state.contacted === 'yes') return count > 0;
+    if (state.contacted === 'no') return count === 0;
+    if (state.contacted === 'full') return count >= 3;
     if (state.contacted === 'due') {
-      if (!item.lastContactedAt) return false;
+      if (count === 0 || count >= 3) return false;
       const threshold = parseInt(document.getElementById('reknockDays').value, 10) || 7;
-      return daysSince(item.lastContactedAt) >= threshold;
+      return daysSince(lastKnockDate(item)) >= threshold;
     }
     return true;
   }
 
-  function markContacted(item, contacted) {
+  function markNextKnock(item) {
+    const slot = nextKnockSlot(item);
+    if (slot === null) return;
     const table = state.audience === 'leads' ? 'leads' : 'clients';
-    const value = contacted ? new Date().toISOString() : '';
-    DB.update(table, item.id, { lastContactedAt: value });
-    item.lastContactedAt = value; // keep the in-memory row (shared reference) in sync for re-render
+    const patch = { [KNOCK_FIELDS[slot]]: DB.todayISO() };
+    DB.update(table, item.id, patch);
+    Object.assign(item, patch);
+    render();
+  }
+
+  function resetKnocks(item) {
+    const table = state.audience === 'leads' ? 'leads' : 'clients';
+    const patch = { knock1At: '', knock2At: '', knock3At: '', lastContactedAt: '' };
+    DB.update(table, item.id, patch);
+    Object.assign(item, patch);
     render();
   }
 
@@ -234,17 +269,27 @@
           const nameCell = href
             ? `<a href="${href}">${Exporter.escapeHtml(nameFor(item))}</a>`
             : Exporter.escapeHtml(nameFor(item) || '—');
+          const dates = knockDates(item);
+          const knockCell = (d) => (d ? `${DB.fmtDate(d)} <span class="text-faint">(${daysAgoLabel(d)})</span>` : '—');
+          const slot = nextKnockSlot(item);
+          const knockBtn =
+            slot === null
+              ? `<button class="btn btn-ghost btn-sm" disabled>✓ Fully Knocked</button>`
+              : `<button class="btn btn-ghost btn-sm" data-knock="${item.id}">✓ Knock ${slot + 1}</button>`;
           return `
         <tr>
           <td>${nameCell}</td>
           <td>${Exporter.escapeHtml(item.phone || '—')}</td>
           <td class="text-faint" style="font-size:12px;">${detailHtmlFor(item)}</td>
-          <td class="text-faint" style="font-size:12px;">${item.lastContactedAt ? `${DB.fmtDate(item.lastContactedAt.slice(0, 10))} <span class="text-faint">(${daysAgoLabel(item.lastContactedAt)})</span>` : '—'}</td>
+          <td class="text-faint" style="font-size:11px;">${knockCell(dates[0])}</td>
+          <td class="text-faint" style="font-size:11px;">${knockCell(dates[1])}</td>
+          <td class="text-faint" style="font-size:11px;">${knockCell(dates[2])}</td>
           <td>
             <div class="row-actions">
               ${item.phone ? `<a class="btn btn-whatsapp btn-sm" target="_blank" rel="noopener" href="${DB.waLink(item.phone, message)}">💬 WhatsApp</a>` : ''}
               ${item.phone ? `<a class="btn btn-sm" href="${DB.smsLink(item.phone, message)}">✉️ SMS</a>` : '<span class="text-faint">No phone</span>'}
-              <button class="btn btn-ghost btn-sm" data-knock="${item.id}">${item.lastContactedAt ? '↺ Reset' : '✓ Knocked'}</button>
+              ${knockBtn}
+              ${knockCount(item) > 0 ? `<button class="btn btn-ghost btn-sm btn-icon" data-reset-knock="${item.id}" title="Reset all knocks">↺</button>` : ''}
             </div>
           </td>
         </tr>`;
@@ -254,7 +299,13 @@
       document.getElementById('tableBody').querySelectorAll('[data-knock]').forEach((btn) =>
         btn.addEventListener('click', () => {
           const item = rows.find((r) => r.id === btn.getAttribute('data-knock'));
-          if (item) markContacted(item, !item.lastContactedAt);
+          if (item) markNextKnock(item);
+        })
+      );
+      document.getElementById('tableBody').querySelectorAll('[data-reset-knock]').forEach((btn) =>
+        btn.addEventListener('click', () => {
+          const item = rows.find((r) => r.id === btn.getAttribute('data-reset-knock'));
+          if (item && confirmAction('Reset all knock marks for this contact?')) resetKnocks(item);
         })
       );
     }
@@ -267,9 +318,15 @@
     const cols = [
       { key: 'name', label: state.audience === 'leads' ? 'Lead' : 'Client', width: 22 },
       { key: 'phone', label: 'Phone', width: 16 },
+      { key: 'knock1', label: 'Knock 1', width: 14 },
+      { key: 'knock2', label: 'Knock 2', width: 14 },
+      { key: 'knock3', label: 'Knock 3', width: 14 },
       { key: 'message', label: 'Message', width: 50 },
     ];
-    const data = rows.map((item) => ({ name: nameFor(item), phone: item.phone, message: messageFor(item) }));
+    const data = rows.map((item) => {
+      const dates = knockDates(item);
+      return { name: nameFor(item), phone: item.phone, knock1: dates[0], knock2: dates[1], knock3: dates[2], message: messageFor(item) };
+    });
     Exporter.toExcel(cols, data, `Bulk-Contact-${state.audience}-${DB.todayISO()}.xlsx`, 'Contacts');
     toast('List exported', 'success');
   });
@@ -312,7 +369,7 @@
       const result = await BulkSms.sendOne(item.phone, messageFor(item));
       if (result.ok) {
         sent++;
-        markContacted(item, true);
+        markNextKnock(item);
       } else {
         failed++;
       }
