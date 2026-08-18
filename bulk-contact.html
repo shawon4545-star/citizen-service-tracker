@@ -105,6 +105,20 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:16px;" id="bulkWaCard">
+        <div class="card-header"><h2>Send via WhatsApp (Bulk)</h2></div>
+        <div class="card-pad">
+          <p class="text-dim mt-0" id="waHint">Opens a WhatsApp chat for each matching contact, one at a time — WhatsApp doesn't allow true one-click bulk sending, so each click opens the next chat pre-filled with your message; you just tap Send inside WhatsApp.</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnWaNext">💬 Open Next WhatsApp Chat</button>
+            <button class="btn btn-sm hidden" id="btnWaReset">↺ Reset</button>
+          </div>
+          <div id="waProgress" class="hidden" style="margin-top:10px;">
+            <div class="field-hint" id="waProgressText"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <h2 id="matchingTitle">Matching Clients</h2>

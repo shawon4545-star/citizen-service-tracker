@@ -41,6 +41,7 @@
     document.getElementById('messageTemplate').value = isLeads ? MESSAGES.leads : MESSAGES.clients;
     state.selectedIds.clear();
     state.showSelectedOnly = false;
+    resetWaQueue();
     refreshBulkSmsAvailability();
     render();
   });
@@ -339,6 +340,7 @@
       : `${rows.length} ${noun}${rows.length === 1 ? '' : 's'}`;
     updateSelectionUI(baseRows);
     refreshBulkSmsAvailability();
+    refreshWaAvailability();
   }
 
   function updateSelectionUI(baseRows) {
@@ -426,6 +428,69 @@
     toast('List exported', 'success');
   });
 
+  // ---------- Bulk WhatsApp ----------
+  // WhatsApp's "click-to-chat" links can only be opened one at a time by a real click (browsers block
+  // popups opened programmatically in a loop), so a true one-click blast isn't possible without the paid
+  // WhatsApp Business API. Instead this walks a queue: each click opens the next contact's chat (message
+  // pre-filled) in a new tab, and you tap Send inside WhatsApp yourself.
+  const waQueue = { items: [], index: 0 };
+
+  function waTargetRows() {
+    const rows = currentRows().filter((item) => item.phone);
+    return state.selectedIds.size ? rows.filter((item) => state.selectedIds.has(item.id)) : rows;
+  }
+
+  function resetWaQueue() {
+    waQueue.items = [];
+    waQueue.index = 0;
+    updateWaProgress();
+  }
+
+  function updateWaProgress() {
+    const box = document.getElementById('waProgress');
+    const btn = document.getElementById('btnWaNext');
+    document.getElementById('btnWaReset').classList.toggle('hidden', waQueue.items.length === 0);
+    if (!waQueue.items.length) {
+      box.classList.add('hidden');
+      btn.textContent = '💬 Open Next WhatsApp Chat';
+      return;
+    }
+    box.classList.remove('hidden');
+    const total = waQueue.items.length;
+    if (waQueue.index >= total) {
+      document.getElementById('waProgressText').textContent = `All ${total} chat(s) opened.`;
+      btn.textContent = '💬 Start Again';
+    } else {
+      const next = waQueue.items[waQueue.index];
+      document.getElementById('waProgressText').textContent = `Opened ${waQueue.index} of ${total} — next up: ${nameFor(next) || next.phone}`;
+      btn.textContent = `💬 Open Next (${waQueue.index + 1} of ${total})`;
+    }
+  }
+
+  function refreshWaAvailability() {
+    const noun = state.audience === 'leads' ? 'lead' : 'client';
+    document.getElementById('waHint').textContent = state.selectedIds.size
+      ? `Opens a WhatsApp chat for each of the ${state.selectedIds.size} checked ${noun}(s), one click at a time — you tap Send inside WhatsApp yourself.`
+      : `Opens a WhatsApp chat for every matching ${noun} below (check specific rows to target only those), one click at a time — you tap Send inside WhatsApp yourself.`;
+  }
+
+  document.getElementById('btnWaNext').addEventListener('click', () => {
+    if (waQueue.index >= waQueue.items.length) {
+      waQueue.items = waTargetRows();
+      waQueue.index = 0;
+      if (!waQueue.items.length) {
+        toast('No matching contacts with a phone number', 'danger');
+        return;
+      }
+    }
+    const item = waQueue.items[waQueue.index];
+    window.open(DB.waLink(item.phone, messageFor(item)), '_blank', 'noopener');
+    waQueue.index++;
+    updateWaProgress();
+  });
+
+  document.getElementById('btnWaReset').addEventListener('click', resetWaQueue);
+
   // ---------- Bulk SMS ----------
   function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -492,5 +557,6 @@
   });
 
   refreshBulkSmsAvailability();
+  updateWaProgress();
   render();
 })();
