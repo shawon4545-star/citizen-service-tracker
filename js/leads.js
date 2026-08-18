@@ -12,11 +12,26 @@
 
   document.getElementById('filterStage').innerHTML +=
     settings.leadStages.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+
   // Include both the configured presets and whatever source values actually appear in the data —
-  // imports often bring in source labels (e.g. "BPBS 2823") that don't match a preset.
-  const sourceOptions = [...new Set([...settings.leadSources, ...DB.getAll('leads').map((l) => l.source).filter(Boolean)])].sort();
-  document.getElementById('filterSource').innerHTML +=
-    sourceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+  // imports often bring in source labels (e.g. "BPBS 2823") that don't match a preset. This is
+  // re-run (not just called once at load) because Google Drive sync pulls fresh data in the
+  // background after this script has already started running, so a source added on another device
+  // may not exist in localStorage yet at the exact moment this file first executes.
+  function populateSourceOptions() {
+    const sel = document.getElementById('filterSource');
+    const current = sel.value;
+    const sourceOptions = [...new Set([...settings.leadSources, ...DB.getAll('leads').map((l) => l.source).filter(Boolean)])].sort();
+    sel.innerHTML = '<option value="">All</option>' + sourceOptions.map((s) => `<option value="${Exporter.escapeHtml(s)}">${Exporter.escapeHtml(s)}</option>`).join('');
+    sel.value = current;
+  }
+  populateSourceOptions();
+  window.addEventListener('cst:data-changed', (e) => {
+    if (e.detail && e.detail.key === DB.KEYS.leads) {
+      populateSourceOptions();
+      renderAll();
+    }
+  });
 
   document.getElementById('filterStage').addEventListener('change', (e) => {
     state.stage = e.target.value;

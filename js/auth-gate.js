@@ -11,13 +11,18 @@ firebase.initializeApp(FIREBASE_CONFIG);
 
 const AppAuth = (() => {
   function loadScriptsSequentially(srcs) {
+    // Every app script (db.js, nav.js, leads.js, etc.) is fetched with a fresh cache-busting query
+    // string on every page load — these files change often as the app evolves, and a stale cached
+    // copy silently serving old behavior (missing filters, missing fields) is worse than the small
+    // extra network cost of always re-fetching them.
+    const cacheBust = Date.now();
     return srcs.reduce(
       (p, src) =>
         p.then(
           () =>
             new Promise((resolve, reject) => {
               const s = document.createElement('script');
-              s.src = src;
+              s.src = `${src}${src.includes('?') ? '&' : '?'}v=${cacheBust}`;
               s.onload = resolve;
               s.onerror = () => reject(new Error(`Failed to load ${src}`));
               document.body.appendChild(s);
