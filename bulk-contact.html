@@ -108,15 +108,22 @@
       <div class="card">
         <div class="card-header">
           <h2 id="matchingTitle">Matching Clients</h2>
-          <div class="flex gap-8">
+          <div class="flex gap-8" style="align-items:center;">
             <span class="text-dim" id="recordCount" style="font-size:12px;"></span>
+            <span class="text-dim hidden" id="selectedCount" style="font-size:12px;"></span>
+            <button class="btn btn-sm hidden" id="btnClearSelection">✕ Clear Selection</button>
+            <button class="btn btn-sm hidden" id="btnMarkSelectedKnocked">✓ Mark Knocked (Selected)</button>
             <button class="btn btn-sm" id="btnExportList">▤ Export List</button>
           </div>
         </div>
         <div class="table-wrap">
           <table id="dataTable">
             <thead>
-              <tr><th id="colName">Client</th><th>Phone</th><th id="colDetail">Matching Service(s)</th><th>Knock 1</th><th>Knock 2</th><th>Knock 3</th><th></th></tr>
+              <tr>
+                <th style="width:1%;">#</th>
+                <th style="width:1%;"><input type="checkbox" id="selectAll" /></th>
+                <th id="colName">Client</th><th>Phone</th><th id="colDetail">Matching Service(s)</th><th>Knock 1</th><th>Knock 2</th><th>Knock 3</th><th></th>
+              </tr>
             </thead>
             <tbody id="tableBody"></tbody>
           </table>

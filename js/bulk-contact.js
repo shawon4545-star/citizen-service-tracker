@@ -1,7 +1,7 @@
 (function () {
   Shell.init({ page: 'bulk-contact', title: 'Bulk Contact', sub: 'Message every client or lead matching your filters in one place' });
 
-  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', source: '', leadSearch: '', contacted: '' };
+  const state = { audience: 'clients', service: '', year: '', status: '', search: '', stage: '', source: '', leadSearch: '', contacted: '', selectedIds: new Set() };
   const settings = DB.getSettings();
   const clients = DB.getAll('clients');
   const clientsById = Object.fromEntries(clients.map((c) => [c.id, c]));
@@ -39,6 +39,7 @@
     document.getElementById('colName').textContent = isLeads ? 'Lead' : 'Client';
     document.getElementById('colDetail').textContent = isLeads ? 'Stage / Source' : 'Matching Service(s)';
     document.getElementById('messageTemplate').value = isLeads ? MESSAGES.leads : MESSAGES.clients;
+    state.selectedIds.clear();
     refreshBulkSmsAvailability();
     render();
   });
@@ -255,6 +256,12 @@
   function render() {
     const rows = currentRows();
 
+    const visibleIds = new Set(rows.map((r) => r.id));
+    // Drop selections that fell out of the current filter so the counter / "select all" stay honest.
+    state.selectedIds.forEach((id) => {
+      if (!visibleIds.has(id)) state.selectedIds.delete(id);
+    });
+
     if (!rows.length) {
       document.getElementById('tableBody').innerHTML = '';
       document.getElementById('emptyState').classList.remove('hidden');
@@ -263,7 +270,7 @@
       document.getElementById('emptyState').classList.add('hidden');
       document.getElementById('dataTable').classList.remove('hidden');
       document.getElementById('tableBody').innerHTML = rows
-        .map((item) => {
+        .map((item, i) => {
           const message = messageFor(item);
           const href = linkFor(item);
           const nameCell = href
@@ -276,8 +283,11 @@
             slot === null
               ? `<button class="btn btn-ghost btn-sm" disabled>✓ Fully Knocked</button>`
               : `<button class="btn btn-ghost btn-sm" data-knock="${item.id}">✓ Knock ${slot + 1}</button>`;
+          const checked = state.selectedIds.has(item.id) ? 'checked' : '';
           return `
         <tr>
+          <td class="text-faint" style="font-size:12px;">${i + 1}</td>
+          <td><input type="checkbox" class="row-select" data-id="${item.id}" ${checked} /></td>
           <td>${nameCell}</td>
           <td>${Exporter.escapeHtml(item.phone || '—')}</td>
           <td class="text-faint" style="font-size:12px;">${detailHtmlFor(item)}</td>
@@ -308,9 +318,58 @@
           if (item && confirmAction('Reset all knock marks for this contact?')) resetKnocks(item);
         })
       );
+      document.getElementById('tableBody').querySelectorAll('.row-select').forEach((cb) =>
+        cb.addEventListener('change', () => {
+          if (cb.checked) state.selectedIds.add(cb.getAttribute('data-id'));
+          else state.selectedIds.delete(cb.getAttribute('data-id'));
+          updateSelectionUI(rows);
+        })
+      );
     }
     document.getElementById('recordCount').textContent = `${rows.length} ${state.audience === 'leads' ? 'lead' : 'client'}${rows.length === 1 ? '' : 's'}`;
+    updateSelectionUI(rows);
+    refreshBulkSmsAvailability();
   }
+
+  function updateSelectionUI(rows) {
+    const selectAll = document.getElementById('selectAll');
+    selectAll.checked = rows.length > 0 && rows.every((r) => state.selectedIds.has(r.id));
+    selectAll.indeterminate = !selectAll.checked && rows.some((r) => state.selectedIds.has(r.id));
+
+    const count = state.selectedIds.size;
+    document.getElementById('selectedCount').classList.toggle('hidden', count === 0);
+    document.getElementById('selectedCount').textContent = `${count} selected`;
+    document.getElementById('btnClearSelection').classList.toggle('hidden', count === 0);
+    document.getElementById('btnMarkSelectedKnocked').classList.toggle('hidden', count === 0);
+  }
+
+  document.getElementById('selectAll').addEventListener('change', (e) => {
+    const rows = currentRows();
+    if (e.target.checked) rows.forEach((r) => state.selectedIds.add(r.id));
+    else rows.forEach((r) => state.selectedIds.delete(r.id));
+    render();
+  });
+
+  document.getElementById('btnClearSelection').addEventListener('click', () => {
+    state.selectedIds.clear();
+    render();
+  });
+
+  document.getElementById('btnMarkSelectedKnocked').addEventListener('click', () => {
+    const rows = currentRows().filter((item) => state.selectedIds.has(item.id));
+    if (!rows.length) return;
+    if (!confirmAction(`Mark the next knock for ${rows.length} selected contact(s)?`)) return;
+    rows.forEach((item) => {
+      const slot = nextKnockSlot(item);
+      if (slot === null) return;
+      const table = state.audience === 'leads' ? 'leads' : 'clients';
+      const patch = { [KNOCK_FIELDS[slot]]: DB.todayISO() };
+      DB.update(table, item.id, patch);
+      Object.assign(item, patch);
+    });
+    toast(`Marked knock for ${rows.length} contact(s)`, 'success');
+    render();
+  });
 
   document.getElementById('btnExportList').addEventListener('click', () => {
     const rows = currentRows();
@@ -336,6 +395,11 @@
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  function bulkSmsTargetRows() {
+    const rows = currentRows().filter((item) => item.phone);
+    return state.selectedIds.size ? rows.filter((item) => state.selectedIds.has(item.id)) : rows;
+  }
+
   function refreshBulkSmsAvailability() {
     const btn = document.getElementById('btnSendBulkSms');
     if (!BulkSms.isConfigured()) {
@@ -344,13 +408,15 @@
         'Not set up yet — add your API Key and Sender ID in <a href="settings.html">Settings → Bulk SMS</a> first.';
     } else {
       btn.disabled = false;
-      document.getElementById('bulkSmsHint').textContent =
-        `Sends the message above to every matching ${state.audience === 'leads' ? 'lead' : 'client'} below, one at a time, via your BulkSMSBD account.`;
+      const noun = state.audience === 'leads' ? 'lead' : 'client';
+      document.getElementById('bulkSmsHint').textContent = state.selectedIds.size
+        ? `Sends the message above to just the ${state.selectedIds.size} checked ${noun}(s) below, one at a time, via your BulkSMSBD account.`
+        : `Sends the message above to every matching ${noun} below (check specific rows to send to only those), one at a time, via your BulkSMSBD account.`;
     }
   }
 
   document.getElementById('btnSendBulkSms').addEventListener('click', async () => {
-    const rows = currentRows().filter((item) => item.phone);
+    const rows = bulkSmsTargetRows();
     if (!rows.length) {
       toast('No matching contacts with a phone number', 'danger');
       return;
