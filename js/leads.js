@@ -236,6 +236,7 @@
       phone: '01712345678',
       source: 'Referral',
       interestedService: 'Income Tax Return',
+      phone2: '01898765432',
       knock1At: '2026-08-01',
       knock2At: '',
       knock3At: '',
@@ -291,40 +292,38 @@
     });
   }
 
-  function leadImportUsableRows() {
-    return importState.dataRows.filter((row) => Importer.buildLeadFromRow(row, importState.mapping).phone);
+  function leadImportRecords() {
+    return importState.dataRows.flatMap((row) => Importer.buildLeadRecordsFromRow(row, importState.mapping));
   }
 
   function renderLeadPreview() {
-    const rows = leadImportUsableRows();
-    const blankSkipped = importState.dataRows.length - rows.length;
-    const previewFields = Importer.LEAD_FIELD_DEFS.filter((def) => importState.mapping[def.key] >= 0);
+    const records = leadImportRecords();
+    const rowsWithNoPhone = importState.dataRows.length - importState.dataRows.filter((row) => Importer.buildLeadRecordsFromRow(row, importState.mapping).length > 0).length;
+    const extraFromPhone2 = records.length - (importState.dataRows.length - rowsWithNoPhone);
+    const previewFields = Importer.LEAD_FIELD_DEFS.filter((def) => def.key !== 'phone2' && importState.mapping[def.key] >= 0);
 
     document.getElementById('leadPreviewHead').innerHTML = `<tr>${previewFields.map((f) => `<th>${Exporter.escapeHtml(f.label)}</th>`).join('')}</tr>`;
-    document.getElementById('leadPreviewBody').innerHTML = rows
+    document.getElementById('leadPreviewBody').innerHTML = records
       .slice(0, 5)
-      .map((row) => {
-        const r = Importer.buildLeadFromRow(row, importState.mapping);
-        return `<tr>${previewFields.map((f) => `<td>${Exporter.escapeHtml(r[f.key] || '—')}</td>`).join('')}</tr>`;
-      })
+      .map((r) => `<tr>${previewFields.map((f) => `<td>${Exporter.escapeHtml(r[f.key] || '—')}</td>`).join('')}</tr>`)
       .join('');
 
     document.getElementById('leadPreviewCount').textContent =
-      `Showing ${Math.min(5, rows.length)} of ${rows.length} importable row(s)` +
-      (blankSkipped ? ` · ${blankSkipped} row(s) without a phone number will be skipped` : '');
+      `Showing ${Math.min(5, records.length)} of ${records.length} importable contact(s)` +
+      (extraFromPhone2 > 0 ? ` (includes ${extraFromPhone2} from a second mobile number)` : '') +
+      (rowsWithNoPhone ? ` · ${rowsWithNoPhone} row(s) without any phone number will be skipped` : '');
   }
 
   document.getElementById('btnLeadImport').addEventListener('click', () => {
-    if (importState.mapping.phone < 0) {
-      toast('Map the Phone column before importing', 'danger');
+    if (importState.mapping.phone < 0 && importState.mapping.phone2 < 0) {
+      toast('Map at least one phone column before importing', 'danger');
       return;
     }
-    const rows = leadImportUsableRows();
+    const records = leadImportRecords();
     let added = 0;
     let updated = 0;
     let skipped = 0;
-    rows.forEach((row) => {
-      const r = Importer.buildLeadFromRow(row, importState.mapping);
+    records.forEach((r) => {
       const hasKnockData = Boolean(r.knock1At || r.knock2At || r.knock3At);
       const existing = findLeadByPhone(r.phone);
 

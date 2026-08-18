@@ -31,6 +31,7 @@ const Importer = (() => {
   const LEAD_FIELD_DEFS = [
     { key: 'name', label: 'Name', aliases: ['name', 'fullname', 'leadname', 'contactname'] },
     { key: 'phone', label: 'Phone / Mobile', required: true, aliases: ['mobile', 'phone', 'mobileno', 'contact', 'cell', 'mobilenumber', 'mobile1'] },
+    { key: 'phone2', label: 'Phone 2 / Mobile 2 (optional)', aliases: ['mobile2', 'phone2', 'secondmobile', 'secondmobileno', 'alternatephone', 'altphone', 'mobileno2'] },
     { key: 'source', label: 'Source', aliases: ['source', 'referral', 'ref', 'category'] },
     { key: 'interestedService', label: 'Interested In', aliases: ['interestedin', 'service', 'servicetype', 'interest'] },
     { key: 'knock1At', label: 'Knock 1 Date', aliases: ['knock1date', 'knock1', 'firstknockdate', 'firstknock'] },
@@ -162,7 +163,7 @@ const Importer = (() => {
       const idx = mapping[def.key];
       if (idx < 0 || idx >= row.length) {
         record[def.key] = '';
-      } else if (def.key === 'phone') {
+      } else if (def.key === 'phone' || def.key === 'phone2') {
         record[def.key] = cellToPhoneString(row[idx]);
       } else if (LEAD_DATE_FIELDS.includes(def.key)) {
         record[def.key] = cellToISODate(row[idx]);
@@ -171,6 +172,18 @@ const Importer = (() => {
       }
     });
     return record;
+  }
+
+  /** Builds zero, one, or two lead records from a row — a second record is produced when a "Phone 2"
+      column is mapped and holds a different number, so both numbers become separately-contactable leads. */
+  function buildLeadRecordsFromRow(row, mapping) {
+    const primary = buildLeadFromRow(row, mapping);
+    const records = [];
+    if (primary.phone) records.push(primary);
+    if (primary.phone2 && primary.phone2 !== primary.phone) {
+      records.push({ ...primary, phone: primary.phone2 });
+    }
+    return records;
   }
 
   /** Builds the raw (string) values for the mapped application columns of a row — used for the import preview. */
@@ -266,6 +279,7 @@ const Importer = (() => {
     parseFile,
     buildClientFromRow,
     buildLeadFromRow,
+    buildLeadRecordsFromRow,
     isRowUsable,
     buildApplicationRawFromRow,
     buildApplicationRecordFromRow,
