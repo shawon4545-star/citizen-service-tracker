@@ -350,6 +350,23 @@
     render();
   });
 
+  document.getElementById('btnSelectRange').addEventListener('click', () => {
+    const rows = currentRows();
+    const from = parseInt(document.getElementById('rangeFrom').value, 10);
+    const to = parseInt(document.getElementById('rangeTo').value, 10);
+    if (!from || !to || from < 1 || to < from) {
+      toast('Enter a valid "From #" and "To #"', 'danger');
+      return;
+    }
+    state.selectedIds.clear();
+    rows.slice(from - 1, to).forEach((r) => state.selectedIds.add(r.id));
+    if (!state.selectedIds.size) {
+      toast('No rows in that range', 'danger');
+      return;
+    }
+    render();
+  });
+
   document.getElementById('btnClearSelection').addEventListener('click', () => {
     state.selectedIds.clear();
     render();

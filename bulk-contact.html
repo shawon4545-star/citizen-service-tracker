@@ -116,6 +116,18 @@
             <button class="btn btn-sm" id="btnExportList">▤ Export List</button>
           </div>
         </div>
+        <div class="card-pad" style="padding-top:0; padding-bottom:12px; display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+          <div class="field" style="max-width:110px;">
+            <label>From #</label>
+            <input type="number" id="rangeFrom" min="1" placeholder="1" />
+          </div>
+          <div class="field" style="max-width:110px;">
+            <label>To #</label>
+            <input type="number" id="rangeTo" min="1" placeholder="50" />
+          </div>
+          <button class="btn btn-sm" id="btnSelectRange">☑ Select Range</button>
+          <span class="text-faint" style="font-size:12px;">Selects rows by their # in the list below — handy for sending in lots (e.g. 1–50, then 51–100).</span>
+        </div>
         <div class="table-wrap">
           <table id="dataTable">
             <thead>
