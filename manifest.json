@@ -1,0 +1,16 @@
+{
+  "name": "Citizen Service Tracker",
+  "short_name": "CS Tracker",
+  "description": "Track clients, applications, leads, and outreach for Smart Citizen Services.",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#2f6feb",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

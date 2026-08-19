@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sign In · Citizen Service Tracker</title>
 <link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2f6feb" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
 <body>
 <div class="login-wrap">
@@ -31,5 +35,10 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/auth-gate.js"></script>
 <script src="js/login-page.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+  }
+</script>
 </body>
 </html>
