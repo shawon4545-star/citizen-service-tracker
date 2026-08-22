@@ -31,6 +31,8 @@
   const overdue = withDue.filter((a) => DB.dueBucket(a) === 'overdue');
   const dueSoonOrToday = withDue.filter((a) => ['dueToday', 'dueSoon'].includes(DB.dueBucket(a)));
   const totalFee = applications.reduce((sum, a) => (a.fee !== '' && a.fee !== null && a.fee !== undefined ? sum + Number(a.fee) : sum), 0);
+  const totalExpense = applications.reduce((sum, a) => sum + DB.totalExpenses(a), 0);
+  const totalNet = totalFee - totalExpense;
 
   document.getElementById('statGrid').innerHTML = `
     <div class="stat-card accent-clients">
@@ -57,6 +59,11 @@
       <div class="stat-label">💰 Total Fees</div>
       <div class="stat-value">${totalFee.toLocaleString()}</div>
       <div class="stat-sub">Across all applications</div>
+    </div>
+    <div class="stat-card accent-clients">
+      <div class="stat-label">📈 Net Profit</div>
+      <div class="stat-value" style="color: ${totalNet > 0 ? 'var(--success)' : totalNet < 0 ? 'var(--danger)' : 'inherit'};">${totalNet.toLocaleString()}</div>
+      <div class="stat-sub">Fees minus expenses (${totalExpense.toLocaleString()})</div>
     </div>
   `;
 

@@ -70,6 +70,8 @@
       document.getElementById('tableBody').innerHTML = rows
         .map((a) => {
           const bucket = DB.dueBucket(a);
+          const expenseTotal = DB.totalExpenses(a);
+          const net = DB.netProfit(a);
           return `
         <tr>
           <td><a href="client-detail.html?id=${a.client.id}">${Exporter.escapeHtml(a.client.name)}</a></td>
@@ -77,6 +79,8 @@
           <td>${Exporter.escapeHtml(a.reference || '—')}</td>
           <td><span class="badge ${DB.statusBadgeClass[a.status] || 'badge-neutral'}">${Exporter.escapeHtml(a.status)}</span></td>
           <td>${a.fee !== '' && a.fee !== null && a.fee !== undefined ? Number(a.fee).toLocaleString() : '—'}</td>
+          <td>${expenseTotal ? expenseTotal.toLocaleString() : '—'}</td>
+          <td class="${net > 0 ? 'text-success' : net < 0 ? 'text-danger' : ''}">${net.toLocaleString()}</td>
           <td>${a.dueDate ? DB.fmtDate(a.dueDate) : '—'}</td>
           <td>${a.dueDate ? `<span class="badge ${DB.bucketBadgeClass[bucket]}">${DB.bucketLabel[bucket]}</span>` : '<span class="text-faint">—</span>'}</td>
           <td><a class="btn btn-ghost btn-sm btn-icon" href="client-detail.html?id=${a.client.id}" title="Open client">→</a></td>
@@ -85,10 +89,14 @@
         .join('');
 
       const totalFee = rows.reduce((sum, a) => (a.fee !== '' && a.fee !== null && a.fee !== undefined ? sum + Number(a.fee) : sum), 0);
+      const totalExpense = rows.reduce((sum, a) => sum + DB.totalExpenses(a), 0);
+      const totalNet = totalFee - totalExpense;
       document.getElementById('tableFoot').innerHTML = `
         <tr style="font-weight:700;">
           <td colspan="4">Total</td>
           <td>${totalFee.toLocaleString()}</td>
+          <td>${totalExpense.toLocaleString()}</td>
+          <td class="${totalNet > 0 ? 'text-success' : totalNet < 0 ? 'text-danger' : ''}">${totalNet.toLocaleString()}</td>
           <td colspan="3"></td>
         </tr>`;
     }
@@ -111,9 +119,11 @@
       { key: 'submittedDate', label: 'Submitted', width: 14 },
       { key: 'dueDate', label: 'Due Date', width: 14 },
       { key: 'fee', label: 'Fee', width: 12 },
+      { key: 'expenses', label: 'Expenses', width: 12 },
+      { key: 'net', label: 'Net', width: 12 },
       { key: 'notes', label: 'Notes', width: 28 },
     ];
-    const data = rows.map((a) => ({ ...a, clientName: a.client.name }));
+    const data = rows.map((a) => ({ ...a, clientName: a.client.name, expenses: DB.totalExpenses(a), net: DB.netProfit(a) }));
     Exporter.toExcel(cols, data, `Applications-${DB.todayISO()}.xlsx`, 'Applications');
     toast('Excel file downloaded', 'success');
   }

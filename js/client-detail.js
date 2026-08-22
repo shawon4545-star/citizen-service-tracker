@@ -146,12 +146,16 @@
       .map((a) => {
         const bucket = DB.dueBucket(a);
         const message = a.dueDate ? DB.buildReminderMessage(a, client) : '';
+        const expenseTotal = DB.totalExpenses(a);
+        const net = DB.netProfit(a);
         return `
       <tr>
         <td>${Exporter.escapeHtml(a.serviceType)}${a.assessmentYear ? ` <span class="text-faint">(AY ${Exporter.escapeHtml(a.assessmentYear)})</span>` : ''}</td>
         <td>${Exporter.escapeHtml(a.reference || '—')}</td>
         <td><span class="badge ${DB.statusBadgeClass[a.status] || 'badge-neutral'}">${Exporter.escapeHtml(a.status)}</span></td>
         <td>${a.fee !== '' && a.fee !== null && a.fee !== undefined ? Number(a.fee).toLocaleString() : '—'}</td>
+        <td>${expenseTotal ? expenseTotal.toLocaleString() : '—'}</td>
+        <td class="${net > 0 ? 'text-success' : net < 0 ? 'text-danger' : ''}">${net.toLocaleString()}</td>
         <td>${a.dueDate ? DB.fmtDate(a.dueDate) : '—'}</td>
         <td>${a.dueDate ? `<span class="badge ${DB.bucketBadgeClass[bucket]}">${DB.bucketLabel[bucket]}</span>` : '<span class="text-faint">—</span>'}</td>
         <td>
@@ -174,10 +178,14 @@
     );
 
     const totalFee = apps.reduce((sum, a) => (a.fee !== '' && a.fee !== null && a.fee !== undefined ? sum + Number(a.fee) : sum), 0);
+    const totalExpense = apps.reduce((sum, a) => sum + DB.totalExpenses(a), 0);
+    const totalNet = totalFee - totalExpense;
     document.getElementById('appsFoot').innerHTML = `
       <tr style="font-weight:700;">
         <td colspan="3">Total (${apps.length} application${apps.length === 1 ? '' : 's'})</td>
         <td>${totalFee.toLocaleString()}</td>
+        <td>${totalExpense.toLocaleString()}</td>
+        <td class="${totalNet > 0 ? 'text-success' : totalNet < 0 ? 'text-danger' : ''}">${totalNet.toLocaleString()}</td>
         <td colspan="3"></td>
       </tr>`;
   }
@@ -193,6 +201,7 @@
     state.editingAppId = id || null;
     const record = id ? DB.getAll('applications').find((a) => a.id === id) : null;
     const settings = DB.getSettings();
+    state.expenseDraft = (record?.expenses || []).map((e) => ({ ...e }));
     // Include both the configured presets and whatever service names actually appear in the data —
     // imports often bring in service names (e.g. "Mutation") that don't match a preset (e.g. "Land Mutation").
     const actualServiceTypes = DB.getAll('applications').map((a) => a.serviceType).filter(Boolean);
@@ -236,6 +245,12 @@
                 </div>
                 <div class="field"><label>Fee</label><input id="field_fee" type="number" step="0.01" value="${record?.fee ?? ''}" /></div>
               </div>
+              <div class="field">
+                <label>Expenses <span class="text-faint">(what this work cost you — application fee, office expense, honorarium, etc.)</span></label>
+                <div id="expenseLines"></div>
+                <button type="button" class="btn btn-sm" id="btnAddExpenseLine">+ Add Expense Line</button>
+                <div class="field-hint" id="expenseSummary" style="margin-top:6px;"></div>
+              </div>
               <div class="field-row">
                 <div class="field"><label>Submitted Date</label><input id="field_submittedDate" type="date" value="${record?.submittedDate || ''}" /></div>
                 <div class="field"><label>Due / Appointment Date</label><input id="field_dueDate" type="date" value="${record?.dueDate || ''}" /></div>
@@ -263,6 +278,13 @@
     toggleAssessmentYear();
     document.getElementById('field_serviceType').addEventListener('change', toggleAssessmentYear);
 
+    renderExpenseLines(settings);
+    document.getElementById('field_fee').addEventListener('input', updateExpenseSummary);
+    document.getElementById('btnAddExpenseLine').addEventListener('click', () => {
+      state.expenseDraft.push({ id: DB.uid(), head: settings.expenseHeads[0] || '', amount: '', note: '' });
+      renderExpenseLines(settings);
+    });
+
     const close = () => (modalRoot.innerHTML = '');
     document.getElementById('modalClose').addEventListener('click', close);
     document.getElementById('modalCancel').addEventListener('click', close);
@@ -270,6 +292,66 @@
     document.getElementById('modalSave').addEventListener('click', () => {
       if (saveApp()) close();
     });
+  }
+
+  function renderExpenseLines(settings) {
+    const wrap = document.getElementById('expenseLines');
+    wrap.innerHTML =
+      state.expenseDraft
+        .map(
+          (line, i) => `
+      <div class="field-row" style="grid-template-columns: 1.2fr 1fr 1.4fr auto; align-items:end; margin-bottom:6px;">
+        <div class="field">
+          ${i === 0 ? '<label>Head</label>' : ''}
+          <select data-exp-head="${i}">
+            ${settings.expenseHeads.map((h) => `<option value="${Exporter.escapeHtml(h)}" ${h === line.head ? 'selected' : ''}>${Exporter.escapeHtml(h)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          ${i === 0 ? '<label>Amount</label>' : ''}
+          <input type="number" step="0.01" data-exp-amount="${i}" value="${line.amount ?? ''}" />
+        </div>
+        <div class="field">
+          ${i === 0 ? '<label>Note</label>' : ''}
+          <input type="text" data-exp-note="${i}" value="${Exporter.escapeHtml(line.note || '')}" placeholder="optional" />
+        </div>
+        <button type="button" class="btn btn-ghost btn-icon" data-exp-remove="${i}" title="Remove">🗑</button>
+      </div>`
+        )
+        .join('') || `<div class="text-faint" style="font-size:12px; margin-bottom:6px;">No expenses added for this application yet.</div>`;
+
+    wrap.querySelectorAll('[data-exp-head]').forEach((el) =>
+      el.addEventListener('change', (e) => {
+        state.expenseDraft[Number(el.getAttribute('data-exp-head'))].head = e.target.value;
+      })
+    );
+    wrap.querySelectorAll('[data-exp-amount]').forEach((el) =>
+      el.addEventListener('input', (e) => {
+        state.expenseDraft[Number(el.getAttribute('data-exp-amount'))].amount = e.target.value;
+        updateExpenseSummary();
+      })
+    );
+    wrap.querySelectorAll('[data-exp-note]').forEach((el) =>
+      el.addEventListener('input', (e) => {
+        state.expenseDraft[Number(el.getAttribute('data-exp-note'))].note = e.target.value;
+      })
+    );
+    wrap.querySelectorAll('[data-exp-remove]').forEach((el) =>
+      el.addEventListener('click', () => {
+        state.expenseDraft.splice(Number(el.getAttribute('data-exp-remove')), 1);
+        renderExpenseLines(settings);
+      })
+    );
+    updateExpenseSummary();
+  }
+
+  function updateExpenseSummary() {
+    const totalExp = state.expenseDraft.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+    const fee = parseFloat(document.getElementById('field_fee').value) || 0;
+    const net = fee - totalExp;
+    document.getElementById('expenseSummary').innerHTML =
+      `Total Expenses: <strong>${totalExp.toLocaleString()}</strong> &nbsp;·&nbsp; Net: ` +
+      `<strong class="${net > 0 ? 'text-success' : net < 0 ? 'text-danger' : ''}">${net.toLocaleString()}</strong>`;
   }
 
   function saveApp() {
@@ -286,6 +368,9 @@
       assessmentYear,
       status: document.getElementById('field_status').value,
       fee: document.getElementById('field_fee').value === '' ? '' : parseFloat(document.getElementById('field_fee').value),
+      expenses: state.expenseDraft
+        .filter((l) => l.head || l.amount || l.note)
+        .map((l) => ({ id: l.id || DB.uid(), head: l.head, amount: l.amount === '' ? '' : parseFloat(l.amount) || 0, note: (l.note || '').trim() })),
       submittedDate: document.getElementById('field_submittedDate').value,
       dueDate: document.getElementById('field_dueDate').value,
       reminderLeadDays: parseInt(document.getElementById('field_reminderLeadDays').value, 10) || 0,

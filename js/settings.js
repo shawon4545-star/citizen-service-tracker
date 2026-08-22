@@ -3,6 +3,7 @@
 
   let settings = DB.getSettings();
   let serviceTypes = [...settings.serviceTypes];
+  let expenseHeads = [...settings.expenseHeads];
 
   function fill() {
     document.getElementById('s_businessName').value = settings.businessName || '';
@@ -12,7 +13,43 @@
     document.getElementById('s_defaultReminderLeadDays').value = settings.defaultReminderLeadDays ?? 7;
     document.getElementById('s_reminderTemplate').value = settings.reminderTemplate || '';
     renderServiceTypes();
+    renderExpenseHeads();
   }
+
+  function renderExpenseHeads() {
+    document.getElementById('expenseHeadList').innerHTML = expenseHeads
+      .map(
+        (s) => `<span class="tag-chip">
+        ${Exporter.escapeHtml(s)} <button data-remove-expense-head="${Exporter.escapeHtml(s)}" title="Remove">✕</button>
+      </span>`
+      )
+      .join('');
+
+    document.querySelectorAll('[data-remove-expense-head]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        const name = btn.getAttribute('data-remove-expense-head');
+        if (expenseHeads.length <= 1) {
+          toast('Keep at least one expense head', 'danger');
+          return;
+        }
+        expenseHeads = expenseHeads.filter((s) => s !== name);
+        renderExpenseHeads();
+      })
+    );
+  }
+
+  document.getElementById('btnAddExpenseHead').addEventListener('click', () => {
+    const input = document.getElementById('newExpenseHead');
+    const name = input.value.trim();
+    if (!name) return;
+    if (expenseHeads.includes(name)) {
+      toast('That expense head already exists', 'danger');
+      return;
+    }
+    expenseHeads.push(name);
+    input.value = '';
+    renderExpenseHeads();
+  });
 
   function renderServiceTypes() {
     document.getElementById('serviceList').innerHTML = serviceTypes
@@ -58,6 +95,7 @@
       defaultReminderLeadDays: parseInt(document.getElementById('s_defaultReminderLeadDays').value, 10) || 0,
       reminderTemplate: document.getElementById('s_reminderTemplate').value,
       serviceTypes,
+      expenseHeads,
     };
     settings = DB.saveSettings(patch);
     toast('Settings saved', 'success');
@@ -89,6 +127,7 @@
         toast('Backup restored', 'success');
         settings = DB.getSettings();
         serviceTypes = [...settings.serviceTypes];
+        expenseHeads = [...settings.expenseHeads];
         fill();
       } catch (err) {
         toast('That file is not a valid backup', 'danger');
@@ -201,6 +240,7 @@
       toast('Loaded the cloud version', 'success');
       settings = DB.getSettings();
       serviceTypes = [...settings.serviceTypes];
+      expenseHeads = [...settings.expenseHeads];
       fill();
     } catch (err) {
       toast(`Failed: ${err.message}`, 'danger');

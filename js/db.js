@@ -71,6 +71,7 @@ const DB = (() => {
       address: '',
       countryCode: '880',
       serviceTypes: ['Income Tax Return', 'Land Mutation', 'Passport Application', 'Birth Certificate'],
+      expenseHeads: ['Application Fee', 'Office Expense', 'Honorarium', 'Other'],
       statuses: ['Pending', 'Documents Collected', 'Submitted', 'In Process', 'Ready for Collection', 'Approved', 'Completed', 'Rejected'],
       closedStatuses: ['Completed', 'Rejected'],
       leadStages: ['New', 'Contacted', 'Interested', 'Follow-up', 'Converted', 'Not Interested'],
@@ -150,6 +151,16 @@ const DB = (() => {
     const norm = normalizePhone(phone);
     if (!norm) return null;
     return getAll('clients').find((c) => normalizePhone(c.phone) === norm) || null;
+  }
+
+  // ---------- Expenses / profit ----------
+  function totalExpenses(app) {
+    return (app.expenses || []).reduce((sum, e) => (e.amount !== '' && e.amount !== null && e.amount !== undefined && !isNaN(e.amount) ? sum + Number(e.amount) : sum), 0);
+  }
+
+  function netProfit(app) {
+    const fee = app.fee !== '' && app.fee !== null && app.fee !== undefined ? Number(app.fee) : 0;
+    return fee - totalExpenses(app);
   }
 
   function isClosed(status) {
@@ -294,6 +305,8 @@ const DB = (() => {
     getDocumentsForClient,
     formatFileSize,
     findClientByPhone,
+    totalExpenses,
+    netProfit,
     isClosed,
     dueBucket,
     bucketLabel,
