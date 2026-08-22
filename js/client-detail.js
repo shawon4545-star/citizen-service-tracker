@@ -148,14 +148,16 @@
         const message = a.dueDate ? DB.buildReminderMessage(a, client) : '';
         const expenseTotal = DB.totalExpenses(a);
         const net = DB.netProfit(a);
+        const hasFee = a.fee !== '' && a.fee !== null && a.fee !== undefined;
+        const hasFinancials = hasFee || expenseTotal > 0;
         return `
       <tr>
         <td>${Exporter.escapeHtml(a.serviceType)}${a.assessmentYear ? ` <span class="text-faint">(AY ${Exporter.escapeHtml(a.assessmentYear)})</span>` : ''}</td>
         <td>${Exporter.escapeHtml(a.reference || '—')}</td>
         <td><span class="badge ${DB.statusBadgeClass[a.status] || 'badge-neutral'}">${Exporter.escapeHtml(a.status)}</span></td>
-        <td>${a.fee !== '' && a.fee !== null && a.fee !== undefined ? Number(a.fee).toLocaleString() : '—'}</td>
+        <td>${hasFee ? Number(a.fee).toLocaleString() : '—'}</td>
         <td>${expenseTotal ? expenseTotal.toLocaleString() : '—'}</td>
-        <td class="${net > 0 ? 'text-success' : net < 0 ? 'text-danger' : ''}">${net.toLocaleString()}</td>
+        <td class="${!hasFinancials ? '' : net > 0 ? 'text-success' : net < 0 ? 'text-danger' : ''}">${hasFinancials ? net.toLocaleString() : '—'}</td>
         <td>${a.dueDate ? DB.fmtDate(a.dueDate) : '—'}</td>
         <td>${a.dueDate ? `<span class="badge ${DB.bucketBadgeClass[bucket]}">${DB.bucketLabel[bucket]}</span>` : '<span class="text-faint">—</span>'}</td>
         <td>
